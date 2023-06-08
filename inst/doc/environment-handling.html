@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Environment Handling</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Environment Handling</h1>
+
+
+
+<div id="working-with-figure-environments" class="section level2">
+<h2>Working with Figure Environments</h2>
+<p>Images are an essential component in any article, However due to the
+differences in the support for various graphic formats between LaTeX and
+markdown/HTML we need to fallback on raster graphics.</p>
+<table>
+<caption>Image Format support in various Markup/Typesetting
+Languages</caption>
+<colgroup>
+<col width="22%" />
+<col width="12%" />
+<col width="12%" />
+<col width="39%" />
+<col width="12%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Graphics.Format</th>
+<th align="left">LaTeX</th>
+<th align="left">Markdown</th>
+<th align="left">RMarkdown</th>
+<th align="left">HTML</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">PNG</td>
+<td align="left">✓</td>
+<td align="left">✓</td>
+<td align="left">✓</td>
+<td align="left">✓</td>
+</tr>
+<tr class="even">
+<td align="left">JPG</td>
+<td align="left">✓</td>
+<td align="left">✓</td>
+<td align="left">✓</td>
+<td align="left">✓</td>
+</tr>
+<tr class="odd">
+<td align="left">PDF</td>
+<td align="left">✓</td>
+<td align="left">✗</td>
+<td align="left">✗</td>
+<td align="left">✗</td>
+</tr>
+<tr class="even">
+<td align="left">SVG</td>
+<td align="left">✗</td>
+<td align="left">✓</td>
+<td align="left">✓</td>
+<td align="left">✓</td>
+</tr>
+<tr class="odd">
+<td align="left">Tikz</td>
+<td align="left">✓</td>
+<td align="left">✗</td>
+<td align="left">✓(using tikz engine)</td>
+<td align="left">✗</td>
+</tr>
+<tr class="even">
+<td align="left">Algorithm</td>
+<td align="left">✓</td>
+<td align="left">✗</td>
+<td align="left">✗</td>
+<td align="left">✗</td>
+</tr>
+</tbody>
+</table>
+<p>As we can observe from the above table, raster (PNG and JPG) images
+are relatively easy to handle and do not require any additional
+pre-processing. Pandoc handles it well.</p>
+<p>PNG,JPG images are easily included as markdown images with captions,
+labels and other parameters.</p>
+<p>For other image formats like tikz and algorithm, they are first
+isolated and compiled into a PDF, then to a PNG using pdftools
+package.</p>
+<div id="for-the-best-results-after-conversion" class="section level4">
+<h4>For the best results after conversion :</h4>
+<ol style="list-style-type: decimal">
+<li>Avoid using framebox or any other latex command to wrap the
+<code>\includegraphics{}</code> . This might interfere with the packages
+ability to properly read the path and copy the relevant image
+properly.</li>
+<li>Try to keep the actual content of the caption without any LaTeX
+markup (normal text), as it is not reflected in HTML properly.</li>
+</ol>
+<p>For example :</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode latex"><code class="sourceCode latex"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="kw">\begin</span>{<span class="ex">figure</span>}</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  <span class="bu">\includegraphics</span>{<span class="ex">image/sample.png</span>}</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">\caption</span>{This is a sample caption}</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">\labeL</span>{fig:image-1}</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="kw">\end</span>{<span class="ex">figure</span>}</span></code></pre></div>
+</div>
+</div>
+<div id="working-with-table-environments" class="section level2">
+<h2>Working with Table Environments</h2>
+<p>Tables are commonly used in RJ articles to display data in a tabular
+format. However, there are differences in the way tables are handled by
+LaTeX and HTML.</p>
+<p>LaTeX tables have more customization and are usually optimized for
+printing, whereas the web articles need tables optimized for varying
+sizes of media.</p>
+<p>pandoc converts most of the tables somewhat easily, but is unable to
+do well with table customization packages and complex tables.</p>
+<p>Some pandoc extensions are used in order to tackle them, they are :
+<code>simple_tables</code>, <code>pipe_tables</code></p>
+<p>Limited Multicolumn support is included.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode latex"><code class="sourceCode latex"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">\begin</span>{<span class="ex">table*</span>}[t!]</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">\begin</span>{<span class="ex">center</span>}</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="kw">\begin</span>{<span class="ex">tabular</span>}{l | llll }</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a> <span class="fu">\hline</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a> <span class="fu">\multicolumn</span>{1}{c |}{EXAMPLE} <span class="op">&amp;</span> <span class="fu">\multicolumn</span>{2}{c}{<span class="ss">$X$</span>} <span class="op">&amp;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">\multicolumn</span>{2}{c}{<span class="ss">$Y$</span>} <span class="fu">\\</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a> <span class="fu">\hline</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="op">&amp;</span> 1 <span class="op">&amp;</span> 2 <span class="op">&amp;</span> 1 <span class="op">&amp;</span> 2 <span class="fu">\\</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a> EX1  <span class="op">&amp;</span> X11 <span class="op">&amp;</span> X12 <span class="op">&amp;</span>  Y11  <span class="op">&amp;</span> Y12 <span class="fu">\\</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a> EX2  <span class="op">&amp;</span> X21 <span class="op">&amp;</span> X22 <span class="op">&amp;</span>  Y21  <span class="op">&amp;</span> Y22 <span class="fu">\\</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a> EX3  <span class="op">&amp;</span> X31 <span class="op">&amp;</span> X32 <span class="op">&amp;</span>  Y31  <span class="op">&amp;</span> Y32 <span class="fu">\\</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a> EX4  <span class="op">&amp;</span> X41 <span class="op">&amp;</span> X42 <span class="op">&amp;</span>  Y41  <span class="op">&amp;</span> Y42<span class="fu">\\</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a> EX5  <span class="op">&amp;</span> X51 <span class="op">&amp;</span> X52 <span class="op">&amp;</span>  Y51  <span class="op">&amp;</span> Y52 <span class="fu">\\</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="fu">\hline</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="kw">\end</span>{<span class="ex">tabular</span>}</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="kw">\label</span>{<span class="ex">table1</span>} <span class="fu">\caption</span>{An Example Table with Multicolumn}</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="kw">\end</span>{<span class="ex">center</span>}</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="kw">\end</span>{<span class="ex">table*</span>}</span></code></pre></div>
+<p>The above example illustrates a complicated table, which the texor
+package can handle through subroutines and pre-processing step to
+transform the LaTeX code.</p>
+<ol style="list-style-type: decimal">
+<li>The Stream Editor modifies the <code>\multicolumn{..}</code> to
+<code>\multicolumnx{..}</code></li>
+<li>Then a LaTeX macro redefines the <code>\multicolumnx{..}</code> to
+<code>\multicolumn{---}</code>, which is accepted by pandoc.</li>
+<li>Finally pandoc reads the table and transforms it to markdown.</li>
+</ol>
+<p>Also note that the stream editor is used to rename
+<code>table*</code> environment to <code>table</code> environment
+because the markdown/HTML will not support the specific changes
+<code>table*</code> environment will bring.</p>
+<p>The Resulting Markdown Generated would look like :</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>::: center</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>::: {#table1}</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  -------------------------------------</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  EXAMPLE   <span class="sc">\(</span>X<span class="sc">\)</span>         <span class="sc">\(</span>Y<span class="sc">\)</span>   </span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  --------- ------- ----- ------- -----</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="in">            1       2     1       2</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  EX1       X11     X12   Y11     Y12</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  EX2       X21     X22   Y21     Y22</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  EX3       X31     X32   Y31     Y32</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  EX4       X41     X42   Y41     Y42</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  EX5       X51     X52   Y51     Y52</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  -------------------------------------</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  : Table 1: An Example Table with Multicolumn</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>:::</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>[]{#table1 label=&quot;table1&quot;}</span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>:::</span></code></pre></div>
+</div>
+<div id="working-with-code-environments" class="section level2">
+<h2>Working with Code Environments</h2>
+<p>Pandoc naturally converts verbatim environment easily, however the
+redefination of other commands such as <code>example</code>,
+<code>example*</code>, <code>Sinput</code> etc to verbatim does not work
+well in pandoc.</p>
+<p>Hence Texor package uses the stream editor to search find and replace
+matching code environments to verbatim before pandoc touches it.</p>
+<p>This way the the code is not lost in conversion, also a pandoc
+extension is used to add attributes to the markdown code using
+’fenced_code_attributes`</p>
+<div id="supported-rj-article-latex-code-environment" class="section level3">
+<h3>Supported RJ-article (LaTeX) code environment:</h3>
+<table>
+<caption>Code Environment support in texor</caption>
+<colgroup>
+<col width="22%" />
+<col width="40%" />
+<col width="36%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">example</th>
+<th align="left">S.series</th>
+<th align="left">special.verbatim</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">example, example*</td>
+<td align="left">Sin, Sout, Scode,Sinput,Soutput</td>
+<td align="left">smallverbatim, boxedverbatim</td>
+</tr>
+</tbody>
+</table>
+<p>Note that any special markup (like font-size, font-style) bought by
+any of these code environments will be lost, However the retained text
+will have syntax highlighting (for R by default, if you want to change
+the syntax highlighting, change the language in the markdown source code
+formed)</p>
+</div>
+</div>
+<div id="working-with-math-environments" class="section level2">
+<h2>Working with Math Environments</h2>
+<p>Math typesetting has always been LaTeX’s highlight feature, making it
+a de facto choice among academicians and researchers globally. However,
+as we proceed to our humble web interfaces, math is hard to describe
+traditionally. There have been advancements in JavaScript libraries to
+better Typeset and present math in web pages but not all LaTeX
+commands/math functions are available.</p>
+<p>The texor package uses Mathjax version 3<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a> to enhance the visual
+look of the math content in HTML. There is support for equations, inline
+math, and equation numbering.</p>
+</div>
+<div class="footnotes footnotes-end-of-document">
+<hr />
+<ol>
+<li id="fn1"><p>more info <a href="https://www.mathjax.org/">here</a><a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+</ol>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
