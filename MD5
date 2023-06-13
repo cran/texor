@@ -1,7 +1,7 @@
-345f4b404d7857b8de3682a2c9e5742b *DESCRIPTION
+6f56d348c00c62723dca76eb55dba435 *DESCRIPTION
 b8b5c48687e255540c4a40beb29ce2ee *LICENSE
 5c1cdbd28d34c271e3b5fbb6d900e565 *NAMESPACE
-2d610a3a4d6f5b4ce88288ef5f468bf5 *NEWS.md
+fd8f64c24fa1a670160154991a96159f *NEWS.md
 62c32bec9a292beca02869bf0a4fc811 *R/algorithm-tools.R
 ebfea68af7ca7bbaedd8a0eb41df6abd *R/article-tools.R
 c6595568eb046d678a49eea9223e760b *R/automation-tools.R
@@ -79,7 +79,7 @@ a90b9d731bda1aec7682ba50435d8802 *man/stream_editor.Rd
 fd93b605bfed9e52be592833eab0d36a *man/texor_log.Rd
 d011178fb766530dda28543c5a380189 *tests/testthat.R
 d793a1ca267acfd38d85f35403e91e9a *tests/testthat/test-article-tools.R
-00b69d5cbf697bcc7c348308cf8f771f *tests/testthat/test-figure-tools.R
+537eaaf1360e54b0d443a678bd19c67d *tests/testthat/test-figure-tools.R
 fa2ca7e9a327d86a82031f228922715a *tests/testthat/test-file-tools.R
 c8e722abb33ea562183cfb18d3c5ccac *tests/testthat/test-pdf-tools.R
 857ee199fc26532252872eed8bcb0b0e *tests/testthat/test-tikz-tools.R
