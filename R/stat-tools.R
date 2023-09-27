@@ -59,7 +59,7 @@ count_env <- function(article_dir, env_name) {
         raw_lines <- readLines(file_path)
     }
     else {
-        warning("LaTeX file not found !")
+        message("LaTeX file not found !")
         return(FALSE)
     }
     begin_patt <- paste("\\s*\\\\begin\\{", env_name, "\\}", sep = "")
@@ -109,7 +109,7 @@ count_inline <- function(article_dir, inline) {
         raw_lines <- readLines(file_path)
     }
     else {
-        warning("LaTeX file not found !")
+        message("LaTeX file not found !")
         return(FALSE)
     }
     raw_words <- str_split(raw_lines," ")
@@ -201,4 +201,22 @@ count_inline <- function(article_dir, inline) {
         return(0)
     }
 
+}
+
+
+check_for_errors <- function(article_dir) {
+    issue_file <- paste0(article_dir,"/potential_errors.yaml")
+    if (file.exists(issue_file)) {
+        error_report <- yaml::read_yaml(issue_file)
+    }
+    else {
+        return(FALSE)
+    }
+    if (error_report$bm > 0) {
+        message("Usage of \\bm command in article found !")
+    }
+    if (error_report$boldmath > 0) {
+        message("Usage of \\boldmath command in article found !")
+    }
+    return(TRUE)
 }

@@ -1,84 +1,200 @@
 --[[
-Image numbering filter - Numbering Images in caption
+Image numbering filter V3 - Numbering Images in caption
+Warning: for numbering of Figure, presence of a label\identifier is necessary.
+Any image inside 'alg/' folder is numbered as Algorithm
+Alert: This filter may fail if there is no caption for the figure.
 License:   MIT - see LICENSE file for details
 adapted from: Albert Krewinkel implementation
 original License: CC0
+Pandoc : > 3.0
 --]]
-
+old_session_al = false
+old_session_fg = false
+old_session_wd = false
+old_session_ls = false
 -- Image counter variable
 figures = 0
+local_fig_count = 0
 -- Algorithm counter variable
 algorithms = 0
+algs = 0
+-- codeblock counter variable
+codes = 0
+listings = 0
+-- widetables counter variable
+wdtables = 0
+is_alg = 0
+-- temp variable to check for figure image
+is_fig = 0
+is_listing = 0
+-- temp variable to check for widetable
+is_wdtable = 0
+
+tikz_syle = 0
+-- para filter for tikz content
+p_filter = {
+    Para = function(el)
+        string_el = pandoc.utils.stringify(el)
+        if string_el:find('^(= %[)') then
+            print("removing leftover tikz style")
+            print(el.content)
+            el.content = pandoc.Plain( pandoc.Space())
+            print(el.content)
+            return el
+        end
+        return el
+    end
+}
 --[[
 Applies the filter to Image elements
 --]]
-function Image(el)
-    local label = ""
-    if el.src:match('alg/') then
-        algorithms = algorithms + 1
-        -- Figure Numbering to be appended
-        label = "Algorithm " .. tostring(algorithms)
+filter = {
+ Image = function(el)
+ 	if el.src:match('alg/') then
+ 	    local_fig_count = local_fig_count+1
+        is_alg = 1
+        is_fig = 0
+ 	elseif el.src:match('lst/') then
+ 	    local_fig_count = local_fig_count+1
+        is_listing = 1
+        is_fig = 0
+ 	elseif el.src:match('tikz/') then
+ 	    local_fig_count = local_fig_count+1
+        tikz_style=1
+        is_fig = 1
+        is_alg = 0
     else
-        figures = figures + 1
-        -- Figure Numbering to be appended
-        label = "Figure " .. tostring(figures)
+        local_fig_count = local_fig_count+1
+        is_fig = 1
+        is_alg = 0
     end
-    -- original caption
-    local caption = pandoc.utils.stringify(el.caption)
+ end,
+ Para = function(el)
+        string_el = pandoc.utils.stringify(el)
+        if string_el:find('^(= %[)') then
+            tikz_style = 1
+        end
+ end,
+CodeBlock = function(el)
+        is_code = 1
+end,
+Table = function(el)
+        is_wdtable = 1
+end
+}
+
+function Figure(el)
+    local label = ""
+    pandoc.walk_block(el,filter)
+    if is_alg == 1 then
+        if old_session_al then
+            write_to_file("algorithms.txt",'a',pandoc.utils.stringify(el.identifier))
+        else
+            write_to_file("algorithms.txt",'w',pandoc.utils.stringify(el.identifier))
+            old_session_al = true
+        end
+        algorithms = algorithms + 1
+    	label = "Algorithm " .. tostring(algorithms) .. ":"
+    	for i = 1,#el.content,1 do
+    	    if el.content[i].tag == 'Image' and local_fig_count == 1 then
+    	        print(label)
+    	        -- leave it empty pandoc will handle it appropriately.
+    	        el.content[i].attributes[2] = {}
+    	    end
+    	    if el.content[i].tag == 'Para' or el.content[i].tag == 'Plain' then
+    	        if el.content[i].content[1].tag ~= "Image" then
+    	            -- remove any leftover string from algorithm Images
+    	            el.content[i] = pandoc.Space()
+    	        end
+    	    end
+    	 end
+    end
+
+    if is_code == 1 and is_listing==1 and is_alg == 0 then
+        if old_session_ls then
+            write_to_file("listings.txt",'a',pandoc.utils.stringify(el.identifier))
+        else
+            write_to_file("listings.txt",'w',pandoc.utils.stringify(el.identifier))
+            old_session_ls = true
+        end
+        listings = listings + 1
+    	label = "Listing " .. tostring(listings) .. ":"
+    end
+
+    if is_fig == 1 and is_alg == 0 then
+    	figures = figures + 1
+    	label = "Figure " .. tostring(figures) .. ":"
+    	if old_session_fg then
+    	    write_to_file("figs.txt",'a',pandoc.utils.stringify(el.identifier))
+        else
+            write_to_file("figs.txt",'w',pandoc.utils.stringify(el.identifier))
+            old_session_fg = true
+    	end
+        if tikz_style == 1 then
+            for i = 1,#el.content,1 do
+    	        if el.content[i].tag == 'Para' or el.content[i].tag == 'Plain' then
+    	            if el.content[i].content[1].tag ~= "Image" then
+    	                -- remove any leftover string from tikz Images
+    	                el.content[i] = pandoc.Space()
+    	            end
+    	        end
+            end
+            for i = 1,#el.content,1 do
+                if el.content[i].tag == 'Image' and local_fig_count == 1 then
+    	            -- leave alt text empty pandoc will handle it appropriately.
+    	            print(label)
+    	            el.content[i].attributes[2] = {}
+                end
+	        end
+            tikz_style = 0
+        end
+    end
+    if is_code == 1 and is_fig == 0 and is_alg == 0 then
+        figures = figures + 1
+    	label = "Figure " .. tostring(figures) .. ":"
+    	if old_session_fg then
+    	    write_to_file("figs.txt",'a',pandoc.utils.stringify(el.identifier))
+        else
+            write_to_file("figs.txt",'w',pandoc.utils.stringify(el.identifier))
+            old_session_fg = true
+        end
+    end
+    --using table for grid content as in subfigures
+    if is_wdtable == 1 and is_code == 0 and is_fig == 1 and is_alg == 0 then
+        for i = 1,#el.content,1  do
+            if el.content[i].tag == 'Table' then
+                el.content[i].caption.long = pandoc.Str("widetable")
+            end
+        end
+
+    	label = "Figure " .. tostring(figures) .. ":"
+    end
+    local caption = el.caption
     if not caption then
       -- Figure has no caption, just add the label
-      caption = label
+      caption = {pandoc.Str(label)}
     else
-      caption = label .. " " .. caption
+      caption = {pandoc.Str(label),pandoc.Space()}
     end
-    el.caption = caption
-    -- centering the figure
-    local classes = el.classes
-    if not classes[1] then
-        classes = {"center"}
-    else
-        classes = {"center"}
+    if el.caption then
+        el.caption.long[1].content = caption .. el.caption.long[1].content
     end
-    el.classes = classes
-    local old_attr = el.attributes[1]
-    if old_attr == nil then
-      -- Figure has no attributes
-      el.attributes[1] = {"width", "100%"}
-    else
-      -- Add label as plain block element
-      attribute_1 = el.attributes
-      if el.attributes[1][2]:match('%\\') then
-        local width = tonumber(attribute_1[1][2]:match('%d+.%d+'))
-        if(attribute_1[1][2]:match('%d+.%d+') == nil) then
-           el.attributes[1] = {"width",[[100%]]}
-        else
-            el.attributes[1] = {"width",tostring(width*100)..[[%]]}
-        end
-      else
-          --pass
-      end
-    end
+    is_fig = 0
+    is_alg = 0
+    is_code = 0
+    is_wdtable = 0
+    local_fig_count = 0
     return el
 end
 
-function print_r(arr, indentLevel)
-    local str = ""
-    local indentStr = "#"
 
-    if(indentLevel == nil) then
-        return
-    end
 
-    for i = 0, indentLevel do
-        indentStr = indentStr.."\t"
+function write_to_file(filename,open_mode,content)
+    local file,err = io.open(filename,open_mode)
+    if file then
+        file:write(content .. "\n")
+        file:close()
+    else
+        print("error:", err)
     end
-
-    for index,value in pairs(arr) do
-        if type(value) == "table" then
-            str = str..indentStr..index..": \n"..print_r(value, (indentLevel + 1))
-        else
-            str = str..indentStr..index..": "..value.."\n"
-        end
-    end
-    return str
 end

@@ -1,3 +1,85 @@
+# Version 1.3.0
+
+## Feature Updates
+
+1. Equations are better handled and equation references are edited to match bookdown format.
+2. Knitting of Rmarkdown is now done outside the `temp` folder to avoid PDF compilation errors.
+3. Added workaround macros for `\nameref{}` and `\autoref{}`.
+4. Added workaround macros for `\scalebox{}`, `\fbox{}`, `\adjustbox{}`, `\framebox{}`.
+5. Option to set DPI when invoking `convert_to_png` function.
+
+## Bug Fixes
+
+1. `CodeBlocks` and `WideTables` are now back to the original form.
+2. `Algorithm` get separate numbering in references.
+3. Removed unnecessary warnings.
+4. Better mechanism to remove leftover text after processing tikz.
+5. Package names using `\pkg{}` are now bold.
+6. Reduced DPI of raster images to reduce file sizes.
+7. `Algorithmic` not treated as figures.
+8. Fixes in lua filters for equation which now adds basic support for tabular and removes nested inline math.
+9. Fixing logic in table reference numbering.
+
+## Accessibility Feature Updates
+
+1. All images processed are set with a default alt-text : 'graphic without alt text' 
+
+# Version 1.2.0
+
+## Feature Updates
+
+1. `CodeBlock` and `WideTable` get their own numbering (but they share references with figures), Enhancement #51.
+2. added support for `\command{..}` macro.
+3. Included dummy `slug` and `citation_url`, Issue #50.
+4. Included a constructor for sample article, Enhancement #52.
+5. Added support for `\file{}`,`\var{}`,`\env{}`,`\option{}`,`\dfn{}`, `\cpkg{}` and `\samp{}`  macro.
+6. Asking user for Inputs in `interactive_mode`, Enhancement #53.
+
+## Bug Fixes
+
+1. Modified the workflow to avoid missing Images.
+2. Modified Lua filters to suppress numbering widetables in captions.
+3. Fixed Issue #49 where some text of algorithms were left behind.
+4. Updated pdf conversion functions with poppler version check and note in man pages.
+5. Fixed copying markdown files back in temp_mode.
+6. Set `unlink()` as `on.exit()` function in temp_mode
+7. Removed table Numbering for images gridded in a table environment within a Figure environment.
+
+# Version 1.1.0
+
+## Feature Updates
+
+1. New mechanism to convert articles without wrapper files.
+2. Support for non-standard named RJwrapper files.
+3. Support for files with inclusive articles, however only articles included in the main article are included.
+4. Support for `smallexample` code environment
+5. Enhancement #47 : temporary mode for conversions to keep the original LaTeX article untouched.
+6. Bumped up pandoc version requirement from 2.17 to 3.1 (minimum), latest (recommended)
+
+## Bug Fixes
+
+1. Figure Environment wont be numbered if there is no Image in it.
+2. Now tikz images can be hot reloaded, no need to remove `\includegraphics{}` line manually.
+3. Fixed #46 where tikz style blocks would persist.
+4. Fixed #45 with Enhancement #47.
+5. Closed #41 momentarily.
+6. Default issue and year is now based on current date.
+7. Fixed #48 - in Lua filter added check for `DisplayMath` for equation numbering.
+8. Closed #40  as most of the issues have been fixed.
+
+# Version 1.0.5
+
+## Feature Updates
+
+1. A new Lua Filter to check for possible issues in LaTeX file during conversion
+2. New function to check multiple labels used in an environment
+
+## Bug Fixes
+
+1. Updated Image caption Lua filter which was broken by pandoc v3 (Figure update)
+2. Updated pkgdown website theme
+3. Fixed a Lua Filter to add extensions to some LaTeX Figure elements
+
 # Version 1.0.3
 
 ## Bug Fixes

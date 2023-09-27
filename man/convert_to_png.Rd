@@ -4,10 +4,12 @@
 \alias{convert_to_png}
 \title{convert one single pdf file to png}
 \usage{
-convert_to_png(file_path)
+convert_to_png(file_path, dpi = 180)
 }
 \arguments{
 \item{file_path}{path to the pdf file}
+
+\item{dpi}{Set DPI for converting PDF files. default: 180}
 }
 \value{
 png file of the same
@@ -22,6 +24,10 @@ image.
 Note : The extensions in LaTeX source code will
 automatically be changed during pandoc conversion
 by a lua filter (refer : inst/extdata/image_filter.lua)
+}
+\note{
+If you find inconsistencies in the raster image generated from PDF using this
+ function. Please update poppler utils to newer versions (possibly latest one).
 }
 \examples{
 article_dir <- system.file("examples/pdf_conversion",

@@ -1,44 +1,66 @@
 --[[
-Bookdown Math Equation  Filter – Add Bookdown style equation numbering and labels from LaTeX
-format \label{eq:xyz} to bookdown format (\#eq:xyz)
-pandoc generated sample : $\mbox{$\mathbf B$}$
-filter generated equivalent : [\(\mbox{$\mathbf B$}\)]
-Conversion type : LaTeX --> Markdown
-Copyright: © 2023 Abhishek Ulayil
-License:   MIT – see LICENSE file for details
---]]
-
-equation_labels = {}
-
---[[
-Applies the filter to Math elements
---]]
---[[
 Equation filter – tries to correct and fix the equations and references.
 Note: In pandoc use --from as latex
 Copyright: © 2023 Abhishek Ulayil
 License:   MIT – see LICENSE file for details
 --]]
-
+old_session = false
+old_session_2 = false
 function Math(el)
-    if el.text:match('label') then
-        local text = pandoc.utils.stringify(el.text)
-        s, e, l =string.find(text,"\\label{(.-)}")
-        table.insert(equation_labels,l)
-        -- Bookdown does not support . _ in equations hence substituting them as hyphen
-        l = string.gsub(l, "%.", "-")
-        l = string.gsub(l, "_", "-")
-        l = string.gsub(l, " ", "-")
-        if (not l:match("^eq:")) then
-            l = "eq:" .. l
-        end
-        el.text = text .. [[  (\#]] .. l .. [[)  ]]
-    else
-        --pass
+    if el.text:match('\\bm') then
+        el.text= el.text:gsub('\\bm','\\mathbf')
     end
-    local left = el.mathtype == 'InlineMath' and '\\(' or '\n$$'
-    local right = el.mathtype == 'InlineMath' and '\\)' or '$$'
-    return pandoc.RawInline('markdown', left .. el.text .. right)
+    if el.text:match('\\begin{tabular}') then
+        el.text= el.text:gsub('\\begin{tabular}','\\begin{array}')
+
+    end
+    if el.text:match('\\end{tabular}') then
+        el.text= el.text:gsub('\\end{tabular}','\\end{array}')
+    end
+    if el.mathtype == "DisplayMath" then
+        if el.text:match('%$') then
+            print(el.text)
+            el.text= el.text:gsub('%$', '')
+        end
+        if el.text:match('\\label') then
+            local text = pandoc.utils.stringify(el.text)
+            s, e, l = string.find(text,"\\label{(.-)}")
+            -- Bookdown does not support . _ in equations hence substituting them as hyphen
+            if old_session then
+                write_to_file('oldeqlabels.txt','a',l)
+
+            else
+               write_to_file('oldeqlabels.txt','w',l)
+               old_session = true
+            end
+            if l:match("^eq:") then
+                l = string.gsub(l,"^eq:","")
+            end
+            l = string.gsub(l, "%.", "-")
+            l = string.gsub(l, "_", "-")
+            l = string.gsub(l, " ", "-")
+            l = string.gsub(l, ":","")
+            l = string.gsub(l, "/","")
+            l = string.gsub(l, ",","")
+            if (not l:match("^eq:")) then
+                l = "eq:" .. l
+            end
+            if old_session_2 then
+                write_to_file('neweqlabels.txt','a',l)
+
+            else
+               write_to_file('neweqlabels.txt','w',l)
+               old_session_2 = true
+            end
+            el.text = text .. [[   (\#]] .. l .. [[)]]
+        else
+            --pass
+        end
+        return {pandoc.Str("\n"),el,pandoc.Str("\n")}
+        --return el
+    else
+        return el
+    end
 end
 
 function Link(el)
@@ -48,32 +70,17 @@ function Link(el)
         resource = [[http://]] .. resource
         el.target = resource
     end
-    for _,label in pairs(equation_labels) do
-        if ("#"..label) == el.target then
-            local link_text = el.target
-            link_text = string.gsub(link_text, "%.", "-")
-            link_text = string.gsub(link_text, "_", "-")
-            link_text = string.gsub(link_text, " ", "-")
-            if (not link_text:match("^eq:")) then
-                link_text = "eq:" .. link_text
-            end
-            label = string.gsub(label, "%.", "-")
-            label = string.gsub(label, "_", "-")
-            label = string.gsub(label, " ", "-")
-            if (not label:match("^eq:")) then
-                label = "eq:" .. label
-            end
-            el.target = link_text
-            bkdwn = [[\@ref(]] .. label .. [[)]]
-            is_bkdwn = true
-            break
-        end
-    end
+    return el
+end
 
-    if is_bkdwn then
-        return pandoc.RawInline('markdown', bkdwn)
+function write_to_file(filename, open_mode, content)
+    local file,err = io.open(filename, open_mode)
+    if file then
+        file:write(content .. "\n")
+        file:close()
     else
-        return(el)
+        print("error:", err)
     end
 end
+
 

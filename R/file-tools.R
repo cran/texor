@@ -1,40 +1,3 @@
-#' Get the name of the wrapper file in the article dir
-#'
-#'This function gets the wrapper file name from the
-#'commonly named R-Journal wrapper files.
-#'@details
-#'Usually the R journal wrapper files are named either
-#'1. RJwrapper.tex
-#'2. RJwrap.tex
-#'3. wrapper.tex
-#' @param article_dir path to the directory which contains tex article
-#' @return String with name of wrapper file or empty
-#' @export
-#' @examples
-#' article_dir <- system.file("examples/article",
-#'                  package = "texor")
-#' dir.create(your_article_folder <- file.path(tempdir(), "tempdir"))
-#' x <- file.copy(from = article_dir, to = your_article_folder,recursive = TRUE,)
-#' your_article_path <- paste(your_article_folder,"article",sep="/")
-#' texor::get_wrapper_type(your_article_path)
-#' unlink(your_article_folder,recursive = TRUE)
-get_wrapper_type <- function(article_dir) {
-    article_dir <- xfun::normalize_path(article_dir)
-    wrapper_types <- c("wrapper.tex",
-                       "RJwrap.tex",
-                       "RJwrapper.tex")
-    wrapper_file <- ""
-    for (w_type in wrapper_types) {
-        if (file.exists(file.path(article_dir, w_type))) {
-            wrapper_file <- w_type
-        }
-    }
-    if (wrapper_file == "") {
-        warning(" No Wrapper File Found in the article dir")
-    }
-    return(wrapper_file)
-}
-
 #' @title comment filter for latex lines data
 #'
 #' @description
@@ -89,11 +52,11 @@ write_external_file <- function(file_path, mode, raw_text) {
 get_texfile_name <- function(article_dir) {
     article_dir <- xfun::normalize_path(article_dir)
     lookup_file <- get_wrapper_type(article_dir)
-    if (file.exists(file.path(article_dir,lookup_file))){
+    if (file.exists(file.path(article_dir,lookup_file))) {
         wrapper_file <- readLines(file.path(article_dir, lookup_file))
     }
     else {
-        warning("LaTeX file not found !")
+        message("LaTeX file not found !")
         return(FALSE)
     }
     wrapper_file <- stringr::str_subset(wrapper_file, ".+")
@@ -145,24 +108,33 @@ get_journal_details <- function(article_dir) {
     article_dir <- xfun::normalize_path(article_dir)
     journal_details <- list()
     # windows
-    if( grepl("\\\\",article_dir)){
+    if (grepl("\\\\",article_dir)) {
         hierarchy <- str_split(article_dir, "\\\\")[[1]]
     }
-    if( grepl("/",article_dir)){
+    if (grepl("/",article_dir)) {
         hierarchy <- str_split(article_dir, "/")[[1]]
     } else {
         #--pass
     }
-    journal_folder <- hierarchy[length(hierarchy)-1]
+    journal_folder <- hierarchy[length(hierarchy) - 1]
     if (journal_folder == "") {
-        journal_folder <- hierarchy[length(hierarchy)-2]
+        journal_folder <- hierarchy[length(hierarchy) - 2]
     }
     journal_info <- str_split(journal_folder, "-")[[1]]
     journal_details$volume <- strtoi(journal_info[1],10) - 2008
     journal_details$issue <- strtoi(journal_info[2],10)
-    journal_details$slug <- hierarchy[length(hierarchy)]
-    if (is.na(journal_details$issue)){
+    journal_details$slug <- paste("RJ", hierarchy[length(hierarchy)], sep = "-")
+    if (is.na(journal_details$issue)) {
         journal_details$sample <- TRUE
+        journal_info <- str_split(Sys.Date(), "-")[[1]]
+        journal_details$volume <- strtoi(journal_info[1],10) - 2008
+        if ( strtoi(journal_info[1],10) < 2022) {
+            journal_details$issue <- floor(strtoi(journal_info[2],10) / 6)
+        }
+        else {
+            journal_details$issue <- floor(strtoi(journal_info[2],10) / 3)
+            journal_details$slug <- paste('RJ', strtoi(journal_info[1],10), "000", sep = "-")
+        }
     } else {
         journal_details$sample <- FALSE
     }
@@ -283,7 +255,7 @@ generate_image_paths <- function(article_dir) {
                     "--resource-path", abs_file_path,
                     "--lua-filter", image_list_filter)
     if (! pandoc_version_check()){
-        warning(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=2.17\n","Please Install a newer version of pandoc to run texor"))
+        message(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=2.17\n","Please Install a newer version of pandoc to run texor"))
         pdf_image_paths <- NULL
         return(pdf_image_paths)
     }
@@ -305,3 +277,47 @@ generate_image_paths <- function(article_dir) {
     return(image_paths)
 }
 
+#' Check article for sub-files
+#'
+#' There are some articles which include sub-section as seperate files, this
+#' function checks for the existence of such files.
+#'
+#' @param article_dir path to the directory which contains tex article
+#'
+#' @return TRUE if article has multiple sub files else FALSE
+#' @noRd
+check_sub_sec_files <- function(article_dir) {
+    root_article <- texor::get_texfile_name(article_dir)
+    article_data <- readLines(paste0(article_dir,"/",root_article))
+    sub_sec_file <- article_data[grepl("\\\\input\\{",article_data)]
+    if (length(sub_sec_file) > 0) {
+        return(TRUE)
+    }
+    return(FALSE)
+}
+
+#' Ge paths of sub-files from article
+#'
+#' There are some articles which include sub-section as seperate files, this
+#' function fetches the paths of these included files and returns them as a list.
+#'
+#' @param article_dir path to the directory which contains tex article
+#'
+#' @return a list of file names/ relative paths of included files
+#' @noRd
+get_sub_sec_files <- function(article_dir) {
+    if (!check_sub_sec_files(article_dir)) {
+        return(FALSE)
+    }
+    root_article <- texor::get_texfile_name(article_dir)
+    sub_sec_file <- readLines(paste0(article_dir,"/",root_article))
+    sub_sec_file <- sub_sec_file[grepl("\\\\input\\{",sub_sec_file)]
+    tex_files <- gsub("[[:space:]]", "",
+                     gsub("\\\\input\\{|\\}", "", sub_sec_file))
+    for (i in 1:length(tex_files)) {
+        if (!grepl(".tex$", tex_files[i])) {
+            tex_files[i] <- paste0(tex_files[i], ".tex")
+        }
+    }
+    return(tex_files)
+}

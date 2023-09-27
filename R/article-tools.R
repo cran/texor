@@ -23,7 +23,7 @@ include_style_file <- function(article_dir) {
     article_dir <- xfun::normalize_path(article_dir)
     # Remove the RJournal.sty file to the article directory
     rj_style_path <- paste0(article_dir,"/RJournal.sty")
-    if (file.exists(rj_style_path)){
+    if (file.exists(rj_style_path)) {
         file.remove(rj_style_path)
     }
     # Copy over the Metafix.sty file to the article directory
@@ -41,8 +41,7 @@ include_style_file <- function(article_dir) {
     doc_start <- which(grepl("^\\s*\\\\begin\\{document\\}",
                         wrapper_file_content))
     before_doc_start <- wrapper_file_content[1:(doc_start - 1)]
-    after_doc_start <- wrapper_file_content[doc_start:
-                            length(wrapper_file_content)]
+    after_doc_start <- wrapper_file_content[doc_start:length(wrapper_file_content)]
     usepackage_metafix <- "\\usepackage{Metafix}"
     # Backup original wrapper file
     file.rename(wrapper_path, paste(wrapper_path, ".bk", sep = ""))
@@ -121,20 +120,26 @@ convert_to_markdown <- function(article_dir) {
         "equation_filter.lua", package = "texor")
     bookdown_ref_filter <- system.file(
         "bookdown_ref.lua", package = "texor")
+    error_checker_filter <- system.file(
+        "issue_checker.lua", package = "texor")
+    wdtable_filter <- system.file(
+        "widetable_patcher.lua", package = "texor")
     pandoc_opt <- c("-s",
                     "--resource-path", abs_file_path,
+                    "--lua-filter", error_checker_filter,
                     "--lua-filter", abs_filter,
                     "--lua-filter", bib_filter,
+                    "--lua-filter", equation_filter,
                     "--lua-filter", image_filter,
-                    "--lua-filter", code_block_filter,
                     "--lua-filter", figure_filter,
+                    "--lua-filter", wdtable_filter,
+                    "--lua-filter", code_block_filter,
                     "--lua-filter", table_filter,
                     "--lua-filter", stat_filter,
-                    "--lua-filter", equation_filter,
                     "--lua-filter", bookdown_ref_filter)
     output_format <- "markdown-simple_tables-pipe_tables-fenced_code_attributes"
     # This will generate a markdown file with YAML headers.
-    if (! pandoc_version_check()){
+    if (!pandoc_version_check()) {
         warning(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=2.17\n","Please Install a newer version of pandoc to run texor"))
         return(FALSE)
     }
@@ -153,6 +158,7 @@ convert_to_markdown <- function(article_dir) {
                            get_texfile_name(article_dir),
                            sep = "/")
     find_pkg_references(tex_file_path)
+    check_for_errors(article_dir)
 }
 
 #' @title Modify Markdown to R-markdown
@@ -161,6 +167,8 @@ convert_to_markdown <- function(article_dir) {
 #' generate rmarkdown file in output folder
 #'
 #' @param article_dir path to the directory which contains tex article
+#' @param web_dir option to create a new web directory, default TRUE
+#' @param interactive_mode interactive mode for converting articles with options. default FALSE
 #' @note Use pandoc version greater than or equal to 2.17
 #' @return R-markdown file in the web folder
 #' @export
@@ -183,14 +191,14 @@ convert_to_markdown <- function(article_dir) {
 #' texor::convert_to_markdown(your_article_path)
 #' texor::generate_rmd(your_article_path)
 #' unlink(your_article_folder,recursive = TRUE)
-generate_rmd <- function(article_dir) {
+generate_rmd <- function(article_dir, web_dir= TRUE, interactive_mode = FALSE) {
     article_dir <- xfun::normalize_path(article_dir)
-    if (! pandoc_version_check()){
+    if (!pandoc_version_check()) {
         warning(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=2.17\n","Please Install a newer version of pandoc to run texor"))
         return(FALSE)
     }
-    if (! check_markdown_file(article_dir)){
-        warning(paste0("There seems to be a problem with converted markdown file, Please check again !"))
+    if (!check_markdown_file(article_dir)) {
+        warning(paste0("Pandoc Failed to convert the LaTeX article, please check for missing brackets/closing environments and spelling mistakes !"))
         return(FALSE)
     }
     else {
@@ -199,12 +207,9 @@ generate_rmd <- function(article_dir) {
     volume <- 1 # placeholder value
     issue <- 1 # placeholder value
     journal_details <- get_journal_details(article_dir)
-    if (! journal_details$sample) {
-        volume <- journal_details$volume
-        issue <- journal_details$issue
-    }
-
-    markdown_file <- paste(article_dir,xfun::with_ext(get_wrapper_type(article_dir),"md"),sep="/")
+    volume <- journal_details$volume
+    issue <- journal_details$issue
+    markdown_file <- paste(article_dir,xfun::with_ext(get_wrapper_type(article_dir),"md"),sep = "/")
     metadata <- rmarkdown::yaml_front_matter(markdown_file)
     # reads the abstract from the second author field
     # reason : abstract is patched as author in metafix.sty
@@ -240,7 +245,7 @@ generate_rmd <- function(article_dir) {
     # article metadata from DESCRIPTION
     article_metadata <- if (file.exists(file.path(
         dirname(markdown_file), "DESCRIPTION"))) {
-        if (! journal_details$sample) {
+        if (!journal_details$sample) {
             art <- load_article(file.path(dirname(markdown_file), "DESCRIPTION"))
             online_date <- Filter(function(x) x$status == "online", art$status)
             acknowledged_date <- Filter(function(x) x$status == "acknowledged", art$status)[[1]]$date
@@ -254,7 +259,7 @@ generate_rmd <- function(article_dir) {
             online_date[[1]]$date
         }
         list(
-            slug = if (journal_details$sample){'~'} else {journal_details$slug},
+            slug = if (journal_details$sample) {'~'} else {journal_details$slug},
             acknowledged = acknowledged_date,
             online = online_date
         )
@@ -269,7 +274,7 @@ generate_rmd <- function(article_dir) {
         )
     }
     # if article has no abstract
-    if (toString(metadata$abstract) =="NA") {
+    if (toString(metadata$abstract) == "NA") {
         issue_year <- volume + 2008
         issue_month <- if (issue_year < 2022) issue * 6 else issue * 3
         metadata$abstract <- paste0("The '", metadata$title,
@@ -277,6 +282,23 @@ generate_rmd <- function(article_dir) {
                                     "-", issue, " issue.")
     }
     pkg_yaml_path <- paste(dirname(markdown_file), "pkg_meta.yaml", sep = "/" )
+    if (interactive_mode) {
+        cli::cli_alert_warning(paste0("Currently the slug is : ",
+                                      article_metadata$slug,
+                                      "\nfor the article titled : ",
+                                      metadata$title,
+                                      "\nDo you want to update the slug"))
+        if (utils::menu(c("Yes", "No")) == 1) {
+            article_metadata$slug = toString(readline("Enter the new Slug : "))
+        }
+        cli::cli_alert_warning(paste0("Do you want to set the firstpage,lastpage ?",
+                                      "\nfor the article titled : ",
+                                      metadata$title))
+        if (utils::menu(c("Yes", "No")) == 1) {
+            article_metadata$pages[1] = toString(readline("Enter the firstpage : "))
+            article_metadata$pages[2] = toString(readline("Enter the lastpage : "))
+        }
+    }
     front_matter <- list(
         title = metadata$title,
         abstract = metadata$abstract, #%||% ,
@@ -290,6 +312,7 @@ generate_rmd <- function(article_dir) {
         volume = as.integer(volume),
         issue = as.integer(issue),
         slug = article_metadata$slug,
+        citation_url = "https://rjournal.github.io/",
         packages = yaml::read_yaml(pkg_yaml_path),
         preview = "preview.png",
         bibliography = metadata$bibliography,
@@ -320,14 +343,37 @@ generate_rmd <- function(article_dir) {
         article_body <- c(article_body, pandoc_md_contents[-(1:delimiters[2])])
 
     input_file <- basename(markdown_file)
-    output_file_name <- paste(dirname(markdown_file),
+    if ((web_dir) && (interactive_mode)) {
+        output_file_name <- paste(dirname(markdown_file),
                               "/web/",
-                              toString(tools::file_path_sans_ext(input_file)),
+                              article_metadata$slug,
                               ".Rmd", sep = "")
-    dir.create(dirname(output_file_name), showWarnings = FALSE)
+        dir.create(dirname(output_file_name), showWarnings = FALSE)
+        xfun::write_utf8(front_matter$slug,xfun::with_ext(output_file_name,"txt"))
+    }
+    if (!interactive_mode && !web_dir) {
+        output_file_name <- paste(dirname(markdown_file),"/",
+                                  toString(tools::file_path_sans_ext(input_file)),
+                                  ".Rmd", sep = "")
+    }
+    if (interactive_mode) {
+        output_file_name <- paste(dirname(markdown_file),"/",
+                                  article_metadata$slug,
+                                  ".Rmd", sep = "")
+        xfun::write_utf8(front_matter$slug,xfun::with_ext(output_file_name,"txt"))
+    }
+    if (web_dir) {
+        output_file_name <- paste(dirname(markdown_file),
+                                  "/web/",
+                                  toString(tools::file_path_sans_ext(input_file)),
+                                  ".Rmd", sep = "")
+        dir.create(dirname(output_file_name), showWarnings = FALSE)
+    }
+
+
     xfun::write_utf8(
-        c("---", yaml::as.yaml(front_matter), "---", article_body),
-        output_file_name)
+            c("---", yaml::as.yaml(front_matter), "---", article_body),
+            output_file_name)
 }
 
 #' @title convert LaTeX wrapper to native pandoc AST
@@ -391,6 +437,8 @@ convert_to_native <- function(article_dir) {
         "equation_filter.lua", package = "texor")
     bookdown_ref_filter <- system.file(
         "bookdown_ref.lua", package = "texor")
+    wdtable_filter <- system.file(
+        "widetable_patcher.lua", package = "texor")
     pandoc_opt <- c("-s",
                     "--resource-path", abs_file_path,
                     "--lua-filter", abs_filter,
@@ -398,6 +446,7 @@ convert_to_native <- function(article_dir) {
                     "--lua-filter", image_filter,
                     "--lua-filter", code_block_filter,
                     "--lua-filter", figure_filter,
+                    "--lua-filter", wdtable_filter,
                     "--lua-filter", table_filter,
                     "--lua-filter", stat_filter,
                     "--lua-filter", equation_filter,
@@ -430,6 +479,8 @@ convert_to_native <- function(article_dir) {
 #' @param article_dir path to the directory which contains tex article
 #' @param example only enabled for running examples for documentation and
 #'  to enable export of this function.
+#' @param web_dir option to create a new web directory, default TRUE
+#' @param interactive_mode interactive mode for converting articles with options. default FALSE
 #' @note Use pandoc version greater than or equal to 2.17
 #' @note Do not use example = TRUE param when working with conversions.
 #' @return Renders a RJwrapper.html file in the /web folder, in example it will
@@ -449,11 +500,11 @@ convert_to_native <- function(article_dir) {
 #' texor::copy_other_files(your_article_path)
 #' texor::produce_html(your_article_path,example = TRUE)
 #' unlink(your_article_folder,recursive = TRUE)
-produce_html <- function(article_dir,example = FALSE) {
-    if (example){
+produce_html <- function(article_dir,example = FALSE, web_dir = TRUE, interactive_mode = FALSE) {
+    if (example) {
         return(TRUE)
     }
-    if (! pandoc_version_check()){
+    if (!pandoc_version_check()) {
         warning(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=2.17\n","Please Install a newer version of pandoc to run texor"))
         return(FALSE)
     }
@@ -462,9 +513,76 @@ produce_html <- function(article_dir,example = FALSE) {
     }
     article_dir <- xfun::normalize_path(article_dir)
     article_type <- rjtools::rjournal_web_article
-    input_file_path <- paste(article_dir, "web",
-                    xfun::with_ext(get_wrapper_type(article_dir),"Rmd"),sep="/")
-    rmarkdown::render(
+    wrapper <- get_wrapper_type(article_dir)
+    article_files <- list.files(article_dir, recursive = FALSE)
+    rmd_files <- article_files[grep(pattern = ".Rmd$", article_files)]
+    if (interactive_mode && web_dir) {
+        for (file in rmd_files) {
+            if (xfun::sans_ext(basename(file)) == xfun::sans_ext(get_wrapper_type(article_dir))) {
+                rmd_files <- file
+                break
+            }
+        }
+        input_file_path <- paste(article_dir, "web",
+                                 xfun::with_ext(xfun::sans_ext(rmd_files),"Rmd"),sep = "/")
+    }
+    if (!interactive_mode && !web_dir) {
+        input_file_path <- paste(article_dir,
+                                 xfun::with_ext(wrapper,"Rmd"),sep = "/")
+    }
+    if (interactive_mode) {
+        for (file in rmd_files) {
+            if (xfun::sans_ext(basename(file)) != xfun::sans_ext(get_wrapper_type(article_dir))) {
+                rmd_files <- file
+                break
+            }
+        }
+        input_file_path <- paste(article_dir,
+                                 xfun::with_ext(xfun::sans_ext(rmd_files),"Rmd"),sep = "/")
+    }
+    if (web_dir) {
+        input_file_path <- paste(article_dir, "web",
+                                 xfun::with_ext(wrapper,"Rmd"),sep = "/")
+    }
+    suppressWarnings(rmarkdown::render(
         input = input_file_path,
-        output_format = "rjtools::rjournal_web_article")
+        output_format = "rjtools::rjournal_web_article",))
+}
+
+#' Create an R Journal article with a modified template for texor.
+#'
+#' @details
+#' Outputs an LaTeX R Journal paper template set of files in the project directory.
+#'
+#' @param name the name of the tex file, will default to "test"
+#' @param edit Opens the file for editing in RStudio/R GUI.
+#' @export
+create_article <- function(name="test", edit = TRUE){
+    file = xfun::with_ext(name, "tex")
+    current_dir <- getwd()
+    files <- c(system.file( "extdata/article_template/article.tex", package = "texor"),
+               system.file( "extdata/article_template/RJournal.sty", package = "texor"))
+    file.copy(from = files,to = current_dir, recursive = TRUE)
+    file.rename(from = "article.tex", to = paste0(xfun::sans_ext(name),".tex"))
+    rjwrapper <- whisker::whisker.render(
+        xfun::read_utf8(system.file("RJwrapper_template.tex", package = "texor")),
+        data = list(article_input = sprintf("\\input{%s}", xfun::sans_ext(name)))
+    )
+    xfun::write_utf8(rjwrapper, file.path("RJwrapper.tex"))
+    if (edit) {
+        path <- file
+        path <- normalizePath(path)
+        has_rstudio <- if (requireNamespace("rstudioapi", quietly = TRUE)) {
+            rstudioapi::hasFun("navigateToFile")
+        } else {
+            FALSE
+        }
+        if (has_rstudio) {
+            rstudioapi::navigateToFile(path)
+        } else {
+            utils::file.edit(path)
+        }
+    }
+
+    message("Success: your paper is ready to edit!")
 }

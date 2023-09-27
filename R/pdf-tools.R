@@ -10,8 +10,11 @@
 #' automatically be changed during pandoc conversion
 #' by a lua filter (refer : inst/extdata/image_filter.lua)
 #'
+#' @note
+#'  If you find inconsistencies in the raster image generated from PDF using this
+#'  function. Please update poppler utils to newer versions (possibly latest one).
 #' @param file_path path to the pdf file
-#'
+#' @param dpi Set DPI for converting PDF files. default: 180
 #' @return png file of the same
 #' @export
 #'
@@ -24,19 +27,36 @@
 #' rmarkdown::pandoc_version()
 #' texor::convert_to_png(paste0(your_article_path,"/normal.pdf"))
 #' unlink(your_article_folder,recursive = TRUE)
-convert_to_png <- function(file_path){
+convert_to_png <- function(file_path, dpi = 180){
     file_path <- xfun::normalize_path(file_path)
-    if (! grepl(".pdf$",file_path)) {
+    if (!grepl(".pdf$",file_path)) {
         file_path <- paste0(file_path,".pdf")
     }
     png_file <- paste(toString(
         tools::file_path_sans_ext(file_path)), ".png",
         sep = "")
-    pdftools::pdf_convert(file_path,
-                          format = "png",
-                          dpi = 600,
-                          pages = 1,
-                          filenames = png_file)
+    poppler_version = pdftools::poppler_config()$version
+    if (toString(poppler_version) != "") {
+        version_list <- unlist(strsplit(toString(poppler_version), split = "\\."))
+    }
+    if ((as.integer(version_list[1])  < 22) && ( as.integer(version_list[2]) < 2 )) {
+        message("Older version of poppler utils detected, please update poppler if you find Inconsistencies in the Generated Images.")
+    }
+    if (pdftools::pdf_length(file_path) > 1) {
+        oldwd <- getwd()
+        setwd(dirname(file_path))
+        on.exit(setwd(oldwd))
+        message("This PDF contains multiple pages. Please change the file_paths according to the page numbers manually.")
+        suppressWarnings(pdftools::pdf_convert(file_path,
+                              format = "png",
+                              dpi = dpi))
+    }
+    else {
+        suppressWarnings(pdftools::pdf_convert(file_path,
+                              format = "png",
+                              dpi = dpi,
+                              filenames = png_file))
+    }
 }
 
 #' @title convert all pdf images to png
@@ -47,15 +67,15 @@ convert_to_png <- function(file_path){
 #'
 #' @return modified fig_block
 #' @noRd
-convert_all_pdf <- function(article_dir, fig_block) {
+convert_all_pdf <- function(article_dir, fig_block, dpi) {
     article_dir <- xfun::normalize_path(article_dir)
     for (iterator in seq_along(fig_block)) {
-        if (fig_block[[iterator]]$image_count == 1){
+        if (fig_block[[iterator]]$image_count == 1) {
             if (fig_block[[iterator]]$extension == "pdf") {
                 image_path <- paste0(article_dir,"/",fig_block[[iterator]]$path)
                 convert_to_png(image_path)
                 pdf_rel_path <- fig_block[[iterator]]$path
-                if (! grepl(".pdf$",pdf_rel_path)) {
+                if (!grepl(".pdf$",pdf_rel_path)) {
                     fig_block[[iterator]]$path <- paste0(pdf_rel_path,".png")
                 } else {
                     fig_block[[iterator]]$path <- xfun::with_ext(pdf_rel_path,"png")
@@ -66,7 +86,7 @@ convert_all_pdf <- function(article_dir, fig_block) {
                 tryCatch(file.copy(image_path, web_image_path),
                          error = function(c) {
                              c$message <- paste0(c$message, " (in ", article_dir , ")")
-                             warning(c$message)
+                             message(c$message)
                              fig_block[[iterator]]$copied <- FALSE
                          }
                 )
@@ -80,7 +100,7 @@ convert_all_pdf <- function(article_dir, fig_block) {
                     image_path <- paste0(article_dir,"/",fig_block[[iterator]]$path[iter_2])
                     convert_to_png(image_path)
                     pdf_rel_path <- fig_block[[iterator]]$path[iter_2]
-                    if (! grepl(".pdf$",pdf_rel_path)) {
+                    if (!grepl(".pdf$",pdf_rel_path)) {
                         fig_block[[iterator]]$path[iter_2] <- paste0(pdf_rel_path,".png")
                     } else {
                         fig_block[[iterator]]$path[iter_2] <- xfun::with_ext(pdf_rel_path,"png")
@@ -91,7 +111,7 @@ convert_all_pdf <- function(article_dir, fig_block) {
                     tryCatch(file.copy(image_path, web_image_path),
                              error = function(c) {
                                  c$message <- paste0(c$message, " (in ", article_dir , ")")
-                                 warning(c$message)
+                                 message(c$message)
                                  fig_block[[iterator]]$copied[iter_2] <- FALSE
                              }
                     )
@@ -141,21 +161,28 @@ find_pdf_files <- function(article_dir) {
     pandoc_opt <- c("-s",
                     "--resource-path", abs_file_path,
                     "--lua-filter", pdf_files_list_filter)
-    if (! pandoc_version_check()){
-        warning(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=2.17\n","Please Install a newer version of pandoc to run texor"))
+    if (!pandoc_version_check()) {
+        message(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=2.17\n","Please Install a newer version of pandoc to run texor"))
         pdf_image_paths <- NULL
         return(pdf_image_paths)
     }
     else {
         #pass
     }
-    rmarkdown::pandoc_convert(input_file_path,
+    x <- tryCatch(rmarkdown::pandoc_convert(input_file_path,
                               from = "latex",
                               to = "native",
                               options = pandoc_opt,
                               output = temp_file_path,
-                              verbose = TRUE)
-    if (file.exists(paste0(article_dir,"/pdf_image_source.txt"))){
+                              verbose = TRUE),
+                  warning = function(w){
+                      warning(w)
+                  },
+                  error = function(c){
+                      warning(c)
+                  }
+                  )
+    if (file.exists(paste0(article_dir,"/pdf_image_source.txt"))) {
         pdf_image_paths <- readLines(paste0(article_dir,"/pdf_image_source.txt"))
     } else {
         pdf_image_paths <- NULL
@@ -171,13 +198,13 @@ find_pdf_files <- function(article_dir) {
 #' @return converts pdf to png
 #' @noRd
 make_png_files <- function(input_file_paths) {
-        if (length(input_file_paths)==0) {
+        if (length(input_file_paths) == 0) {
         return()
     }
     input_file_paths[[1]] <- xfun::normalize_path(input_file_paths[[1]])
     if (length(input_file_paths) == 1) {
         if (basename(input_file_paths[[1]]) == "NA") {
-            warning("No files to convert")
+            message("No files to convert")
             return("")
         }
     }
@@ -185,11 +212,22 @@ make_png_files <- function(input_file_paths) {
         png_file <- paste(toString(
             tools::file_path_sans_ext(input_file_paths[[file_iter]][1])), ".png",
             sep = "")
-        pdftools::pdf_convert(input_file_paths[[file_iter]][1],
+        if (pdftools::pdf_length(input_file_paths[[file_iter]][1]) > 1) {
+            message("This PDF contains multiple pages. Please change the file_paths according to the page numbers manually.")
+            oldwd <- getwd()
+            setwd(dirname(input_file_paths[[file_iter]][1]))
+            on.exit(setwd(oldwd))
+            suppressWarnings(pdftools::pdf_convert(input_file_paths[[file_iter]][1],
+                                  format = "png",
+                                  dpi = 180))
+        }
+        else {
+            suppressWarnings(pdftools::pdf_convert(input_file_paths[[file_iter]][1],
                               format = "png",
-                              dpi = 600,
+                              dpi = 180,
                               pages = 1,
-                              filenames = png_file)
+                              filenames = png_file))
+        }
     }
-    message("made PNG graphics @ 600 dpi density")
+    message("made PNG graphics @ 180 dpi density")
 }
