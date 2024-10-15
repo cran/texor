@@ -4,10 +4,21 @@
 \alias{convert_to_markdown}
 \title{convert LaTeX wrapper to markdown}
 \usage{
-convert_to_markdown(article_dir)
+convert_to_markdown(
+  article_dir,
+  kable_tab = TRUE,
+  autonumber_eq = FALSE,
+  fig_in_r = TRUE
+)
 }
 \arguments{
 \item{article_dir}{path to the directory which contains tex article}
+
+\item{kable_tab}{converts to kable table instead of markdown tables}
+
+\item{autonumber_eq}{whether to autonumber the equations, default is FALSE}
+
+\item{fig_in_r}{whether to include figures in R code chunks, default is TRUE}
 }
 \value{
 creates a converted markdown file, as well as a pkg_meta.yaml file
@@ -23,12 +34,15 @@ convert latex(wrapper) file to markdown
 pandoc (along with lua interpreter) is already installed with
  R-studio, hence if not using R-studio you will need to install pandoc.
  https://pandoc.org/installing.html
- @note Use pandoc version greater than or equal to 2.17
+
+Use pandoc version greater than or equal to 3.1
+
+Kable tables will work for simple static data, any math / code /
+ image within any table will send the package into fallback mode (normal
+ markdown tables) for the rest of tables in the article.
 }
 \examples{
 # Note This is a minimal example to execute this function
-# Checking for pandoc version
-# texor works with pandoc version >= 2.17
 article_dir <- system.file("examples/article",
                  package = "texor")
 dir.create(your_article_folder <- file.path(tempdir(), "tempdir"))

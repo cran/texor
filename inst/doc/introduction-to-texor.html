@@ -10,7 +10,9 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+<meta name="author" content="Abhishek Ulayil" />
 
+<meta name="date" content="2024-08-16" />
 
 <title>Introduction to texor</title>
 
@@ -337,34 +339,110 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 <h1 class="title toc-ignore">Introduction to texor</h1>
-<h3 class="subtitle">tools for converting LaTeX source files into
-RJ-web-articles</h3>
+<h4 class="author">Abhishek Ulayil</h4>
+<h4 class="date">2024-08-16</h4>
 
 
 
-<div id="introduction" class="section level1">
-<h1>Introduction</h1>
-<p>texor is a proposed package that can help in converting old LaTeX
+<p>The CRAN package <code>texor</code> helps in converting old LaTeX
 based documents, research papers to HTML through intermediate
-conversions. This is particularly a problem for R Research papers where
-HTML export was not available and hence modern compatibility to export a
-HTML file was missed out. To bring these documents online HTML based
-webpages are a much better alternative as opposed to PDFs and to solve
-the lack of web versions texor will provide a mechanism.</p>
-<div id="conversion-workflow" class="section level2">
-<h2>Conversion Workflow:</h2>
+conversions. This was particularly a problem for legacy R Research
+papers where HTML export was not available and hence modern
+compatibility to export a HTML file was missed out.</p>
+<div id="why-migrate-to-web-format" class="section level2">
+<h2>Why migrate to web format ?</h2>
+<p>We have advanced a lot in the field of web development and modern
+websites offer a much more interactive and accessible interface for the
+knowledge we consume. The advantages of a web format are :</p>
+<ol style="list-style-type: decimal">
+<li>Better support for screen readers, hence better accessibility.</li>
+<li>Convenient to use on mobile devices with smaller screens.</li>
+<li>Maintaining parity with newer articles available in the web
+format.</li>
+<li>Easier translations for the text.</li>
+</ol>
+<p>For maintaining parity with modern articles, we convert the legacy
+articles into R markdown format, a markdown based solution developed to
+allow for publishing PDFs and web content simultaneously without
+requiring separate documents, along with executable code chunks to
+reproduce the results during compile.</p>
+</div>
+<div id="how-do-we-bring-back-the-legacy-documents-into-a-modern-format" class="section level2">
+<h2>How do we bring back the legacy documents into a modern format
+?</h2>
+<p>Now, we have a lot of legacy articles which are only available in the
+PDF format and to bring these LaTeX based documents into a web format we
+needed a conversion tool which could read LaTeX and generate a markdown
+file. The solution exists in a beautiful software written in haskell
+called “Pandoc”, it is fast, portable and integrated well in the R
+ecosystem. But there are limitations in the way Pandoc works with LaTeX
+articles, some of these are :</p>
+<ol style="list-style-type: decimal">
+<li>Pandoc understands a subset of the LaTeX language, which means we
+have to simplify any document we pass on to it for an efficient
+conversion.</li>
+<li>It does not recognize custom environments like <code>example</code>
+enviornment which is based on top of <code>verbatim</code> environment,
+so we need to devise methods to replace these custom environments with
+simple alternatives.</li>
+<li>Talking about bibliography, pandoc will not convert the embedded
+bibliographic entries into BibTeX, which is a preferred format in R
+markdown.</li>
+<li>As for meta-data, pandoc can extract a few bits of meta-data from
+the LaTeX article, however we need a lot more details in order to create
+a front matter yaml for a R markdown.</li>
+<li>Sweave code chunks are not natively understood by pandoc, this
+requires a custom reader to seperate the code chunks and transform it
+into R markdown code chunks.</li>
+<li>Pandoc will never generate R code chunks for figures and tables, we
+would need to develop filters to get these functionality.</li>
+<li>Numbering and referencing of various article components like figure,
+equations and tables require modifications during the conversion using
+filters to acheive a web article which is consistent with the ones we
+currently publish.</li>
+<li>Some artifacts like included PDF images, tikz graphics and algorithm
+environments needs pre-processing and integration with the conversion
+process.</li>
+</ol>
+<p>Sounds like a lot of hassle to just convert a single LaTeX article to
+a R markdown file right ? How nice it would be if we automated
+workarounds for most of these limitations programmatically and do not
+need to manually perform them for each and every document. This was the
+exact thought, when we developed the <code>texor</code> package and its
+sister package <code>rebib</code>. It did all of the above and reduced
+the conversion process for the end user to just a single function
+call.</p>
+<p>If you are converting a R journal LaTeX article</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">latex_to_web</span>(path_to_folder)</span></code></pre></div>
+<p>or in case you are converting a Sweave article<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">rnw_to_rmd</span>(path_to_file)</span></code></pre></div>
+<p>There are more customization options available, if you desire things
+to be handled differently but for the most part, the default settings
+will yield a relatively good conversion to R markdown, which can be
+knitted to HTML.</p>
+<p>This is the aim of the whole package, reducing complexity and
+automating repetitive tasks for a better conversion process.</p>
+<p>Although a key point to note here is, not all documents might convert
+well or at all. This is due to the nature of LaTeX being a very
+customizable and less restrictive.</p>
+</div>
+<div id="internal-conversion-workflow" class="section level2">
+<h2>Internal Conversion Workflow:</h2>
+<p>To explain the internal conversion process a bit more in depth, I
+have divided them into stages, the workflow here is indicative only and
+may differ from the actual sequence due to updates.</p>
 <div id="stage-0-preparing-to-convert" class="section level3">
 <h3>Stage 0 : preparing to convert</h3>
 <p>In this stage, we will check the basics like using correct path,
 normalizing the path,extracting the file_name/ wrapper_name etc..</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># normalizing path using xfun package</span></span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>dir <span class="ot">&lt;-</span> xfun<span class="sc">::</span><span class="fu">normalize_path</span>(dir)</span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co"># getting wrapper file name</span></span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a>wrapper_file <span class="ot">&lt;-</span> texor<span class="sc">::</span><span class="fu">get_wrapper_type</span>(dir)</span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a></span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co"># getting the main LaTeX file name</span></span>
-<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>file_name <span class="ot">&lt;-</span> texor<span class="sc">::</span><span class="fu">get_texfile_name</span>(dir)</span></code></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># normalizing path using xfun package</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>dir <span class="ot">&lt;-</span> xfun<span class="sc">::</span><span class="fu">normalize_path</span>(dir)</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co"># getting wrapper file name</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>wrapper_file <span class="ot">&lt;-</span> texor<span class="sc">::</span><span class="fu">get_wrapper_type</span>(dir)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="co"># getting the main LaTeX file name</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>file_name <span class="ot">&lt;-</span> texor<span class="sc">::</span><span class="fu">get_texfile_name</span>(dir)</span></code></pre></div>
 </div>
 <div id="stage-1-copyingremoving-style-files" class="section level3">
 <h3>Stage 1 : Copying/Removing Style files</h3>
@@ -372,9 +450,9 @@ normalizing the path,extracting the file_name/ wrapper_name etc..</p>
 compile, but rather convert. Hence, to workaround certain limitations,
 we have to remove the RJournal.sty file and include a new style file
 which redefines certain commands.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="co"># This function will remove RJournal.sty file,</span></span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co"># Copy the Metafix.sty file and link it in wrapper.</span></span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">include_style_file</span>(dir)</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># This function will remove RJournal.sty file,</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co"># Copy the Metafix.sty file and link it in wrapper.</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">include_style_file</span>(dir)</span></code></pre></div>
 </div>
 <div id="stage-2-handling-bibliographies" class="section level3">
 <h3>Stage 2 : Handling Bibliographies</h3>
@@ -387,22 +465,23 @@ Lua filter later on.</p>
 default I have set up the bibliography aggregation function, which will
 logically create/update the bibtex file and include it in the
 article_tex_file as well (if not linked).</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># bibliography aggregation when both bibtex and embedded bibliography available,</span></span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co"># Using Bibtex file for bibliography if no embedded bibliography available,</span></span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co"># Create a new bibtex file using the embedded bibliography in the document.</span></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>rebib<span class="sc">::</span><span class="fu">aggregate_bibliography</span>(dir)</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># bibliography aggregation when both bibtex and embedded bibliography available,</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co"># Using Bibtex file for bibliography if no embedded bibliography available,</span></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="co"># Create a new bibtex file using the embedded bibliography in the document.</span></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>rebib<span class="sc">::</span><span class="fu">aggregate_bibliography</span>(dir)</span></code></pre></div>
 </div>
 <div id="stage-3-handing-figures" class="section level3">
 <h3>Stage 3 : Handing Figures</h3>
 <p>Texor package creates a yaml report about the figure environments,
 including tikz, algorithm2e images. There is also a logical function
 which uses pandoc’s Image data for converting PDF images to PNG.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>data <span class="ot">&lt;-</span> texor<span class="sc">::</span><span class="fu">handle_figures</span>(dir, file_name)</span></code></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>data <span class="ot">&lt;-</span> texor<span class="sc">::</span><span class="fu">handle_figures</span>(dir, file_name)</span></code></pre></div>
 </div>
 <div id="stage-4-patching-environments" class="section level3">
 <h3>Stage 4 : Patching Environments</h3>
 <p>Pandoc does not support certain environments, like:<br />
-in figures : figure*, algorithmic, algorithm. in table : table*.<br />
+in figures : figure*, algorithmic, algorithm.<br />
+in table : table*.<br />
 in code : example, example*, Sin, Sout, Scode, Sinput, Soutput,
 smallverbatim, boxedverbatim.</p>
 <p>Here, texor will use the stream editor to patch these environments to
@@ -410,25 +489,22 @@ the default types <code>figure</code>,<code>table</code> and
 <code>verbatim</code>.</p>
 <p>There is also a function to patch equations (especially eqnarray
 environment).</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">patch_code_env</span>(dir)</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">patch_table_env</span>(dir)</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">patch_figure_env</span>(dir)</span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">patch_equations</span>(dir)</span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">patch_code_env</span>(dir)</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">patch_table_env</span>(dir)</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">patch_figure_env</span>(dir)</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">patch_equations</span>(dir)</span></code></pre></div>
 </div>
 <div id="stage-5-converting-the-latex-document-to-markdown" class="section level3">
 <h3>Stage 5 : Converting the LaTeX document to Markdown</h3>
 <p>Here we will convert the document to Markdown, with a lot of Lua
 filters modifying the document.</p>
-<p>pre_conversion statistics will read through the article and find
-statistical elements like figure, table, code blocks, citations etc.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>meta <span class="ot">&lt;-</span> texor<span class="sc">::</span><span class="fu">pre_conversion_statistics</span>(dir)</span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">convert_to_markdown</span>(dir)</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">convert_to_markdown</span>(dir)</span></code></pre></div>
 </div>
 <div id="stage-6-copying-over-dependency-files" class="section level3">
 <h3>Stage 6 : Copying over dependency files</h3>
 <p>This function will copy the files such as figures of all kinds,
 bibtex file, pdfs etc. to the /web folder.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">copy_other_files</span>(dir)</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">copy_other_files</span>(dir)</span></code></pre></div>
 </div>
 <div id="stage-7-converting-the-markdown-to-rmarkdown" class="section level3">
 <h3>Stage 7 : Converting the Markdown to Rmarkdown</h3>
@@ -441,41 +517,38 @@ metadata, title, abstract,etc..</p>
 <li>self_contained = TRUE</li>
 <li>toc = FALSE</li>
 <li>legacy_pdf = TRUE</li>
-<li>web_only = TRUE</li>
 <li>mathjax = “<a href="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" class="uri">https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js</a>”</li>
 </ol>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">generate_rmd</span>(dir)</span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">generate_rmd</span>(dir)</span></code></pre></div>
 </div>
 <div id="stage-8-creating-rj-web-article-from-the-rmarkdown-file" class="section level3">
 <h3>Stage 8 : Creating RJ-web-article from the Rmarkdown file</h3>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">produce_html</span>(dir)</span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>texor<span class="sc">::</span><span class="fu">produce_html</span>(dir)</span></code></pre></div>
 </div>
 </div>
 <div id="note-on-dependencies" class="section level2">
 <h2>Note on Dependencies</h2>
-<p>This package is involved with solving conversion problems on multiple
-fronts, thus has to rely on multiple software tools. A list with
-reasoning is included here:</p>
+<p>This package is involved in tackling multiple challenges, thus has to
+rely on multiple software tools. A list of dependencies is included
+here:</p>
 <ol style="list-style-type: decimal">
-<li>Pandoc (min: V3.1) <a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a> : To convert the basic LaTeX to
+<li>Pandoc (min: V3.1) <a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a> : To convert the basic LaTeX to
 rmarkdown.</li>
 <li>poppler pdfutils : To convert embedded PDF to PNG.</li>
-<li>LaTeX/TinyTex<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a> : For Tikz and PDF article generation.</li>
+<li>LaTeX/TinyTex<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a> : For Tikz graphic conversion.</li>
 <li>rebib : For bibliography conversions/aggregations.</li>
 <li>rjtools : For the rjournal_web_article template.</li>
 <li>stringr : for string manipulation functions.</li>
-<li>Lua filters <a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a> <a href="#fn4" class="footnote-ref" id="fnref4"><sup>4</sup></a> : Filters for manipulation of ingested
-files.</li>
+<li>Lua filters <a href="#fn4" class="footnote-ref" id="fnref4"><sup>4</sup></a></li>
 </ol>
-</div>
 </div>
 <div class="footnotes footnotes-end-of-document">
 <hr />
 <ol>
-<li id="fn1"><p>included in Rstudio<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
-<li id="fn2"><p>read more <a href="https://yihui.org/tinytex/">here</a><a href="#fnref2" class="footnote-back">↩︎</a></p></li>
-<li id="fn3"><p>Filters are included in texor package<a href="#fnref3" class="footnote-back">↩︎</a></p></li>
-<li id="fn4"><p>Filters as standalone are also available at <a href="https://github.com/Abhi-1U/tex-lua-filters">this github repo</a><a href="#fnref4" class="footnote-back">↩︎</a></p></li>
+<li id="fn1"><p>Available in texor version &gt;= v1.4.0<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+<li id="fn2"><p>included in Rstudio<a href="#fnref2" class="footnote-back">↩︎</a></p></li>
+<li id="fn3"><p>read more <a href="https://yihui.org/tinytex/">here</a><a href="#fnref3" class="footnote-back">↩︎</a></p></li>
+<li id="fn4"><p>Filters are included in texor package<a href="#fnref4" class="footnote-back">↩︎</a></p></li>
 </ol>
 </div>
 

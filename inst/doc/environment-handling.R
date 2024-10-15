@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -7,7 +7,7 @@ knitr::opts_chunk$set(
 ## ----setup, echo=FALSE--------------------------------------------------------
 library(texor)
 
-## ---- echo = FALSE, results = 'asis'------------------------------------------
+## ----echo = FALSE, results = 'asis'-------------------------------------------
 library(knitr)
 table <- data.frame("Graphics-Format" = c("PNG", "JPG", "PDF", "SVG", "Tikz", "Algorithm"),
               "LaTeX" = c("&#10003;", "&#10003;", "&#10003;", "&#10007;", "&#10003;", "&#10003;"),
@@ -16,7 +16,7 @@ table <- data.frame("Graphics-Format" = c("PNG", "JPG", "PDF", "SVG", "Tikz", "A
               "HTML" = c("&#10003;", "&#10003;", "&#10007;", "&#10003;", "&#10007;", "&#10007;"))
 kable(table, caption =  "Image Format support in various Markup/Typesetting Languages")
 
-## ---- echo = FALSE, results = 'asis'------------------------------------------
+## ----echo = FALSE, results = 'asis'-------------------------------------------
 library(knitr)
 table <- data.frame(
               "example" = c("example, example*"),

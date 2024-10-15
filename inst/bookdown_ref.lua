@@ -21,8 +21,6 @@ function Link(el)
         mini_iter = 1
         for line in io.lines("algorithms.txt") do
             if (("#"..line) == pandoc.utils.stringify(el.target)) then
-                --print("#"..line)
-                print("#"..line .. tostring(mini_iter))
                 el.content = pandoc.Str(tostring(mini_iter))
                 break
             end
@@ -46,11 +44,23 @@ function Link(el)
         mini_iter_2 = 1
         for line in io.lines("figs.txt") do
             if (("#"..line) == pandoc.utils.stringify(el.target)) then
-                print("#"..line .. tostring(mini_iter_2))
                 el.content = pandoc.Str(tostring(mini_iter_2))
                 break
             end
             mini_iter_2 = mini_iter_2 + 1
+        end
+    end
+    -- change figure references if new numbering scheme is used
+    if (file_exists("fig_refs.txt")) then
+        mini_iter_f = 1
+        for line in io.lines("fig_refs.txt") do
+            if ("#"..line) == (pandoc.utils.stringify(el.target)) then
+                el.target = [[#fig:]]..sanitize_identifier(pandoc.utils.stringify(el.target))
+                el.content = l:gsub("#","")
+                bkdown = [[\@ref(fig:]] .. l:gsub("#","") .. [[)]]
+                return pandoc.RawInline('markdown', bkdown)
+            end
+            mini_iter_f  = mini_iter_f + 1
         end
     end
     -- change numbering of tables only if widetables are present
@@ -58,8 +68,6 @@ function Link(el)
         mini_iter_3 = 1
         for line in io.lines("tabs.txt") do
             if (("#"..line) == pandoc.utils.stringify(el.target)) then
-                --print("#"..line)
-                print("#"..line .. tostring(mini_iter_3))
                 el.content = pandoc.Str(tostring(mini_iter_3))
                 break
             end
@@ -71,7 +79,6 @@ function Link(el)
         mini_iter_4 = 1
         for line in io.lines("oldeqlabels.txt") do
             if ("#"..line) == (pandoc.utils.stringify(el.target)) then
-                print("#"..line .. tostring(mini_iter_4))
                 el.target = [[#]]..new_eq_labels[mini_iter_4]
                 break
             end
@@ -89,13 +96,29 @@ function Link(el)
     end
     if el.attributes[1] ~= nil then
         if el.attributes[1][2] == "ref" then
-
-            return pandoc.RawInline('markdown', [[[]].. pandoc.utils.stringify(el.content) .. [[](]] .. el.target .. [[)]])
+            if (el.target:match("^#fig:")) or (el.target:match("^#tab:")) or (el.target:match("^#table:")) then
+                l = el.target
+                el.content = l:gsub("#","")
+                bkdown = [[\@ref(]] .. l:gsub("#","") .. [[)]]
+                return pandoc.RawInline('markdown', bkdown)
+            else
+                return pandoc.RawInline('markdown', [[[]].. pandoc.utils.stringify(el.content) .. [[](]] .. el.target .. [[)]])
+            end
         end
     else
         return el
     end
     return el
+end
+
+function sanitize_identifier(identifier)
+    l = identifier
+    l = string.gsub(l, "%.", "-")
+    l = string.gsub(l, "_", "-")
+    l = string.gsub(l, " ", "-")
+    l = string.gsub(l,"#","")
+    l = string.gsub(l,":","")
+    return l
 end
 
 function file_exists(name)

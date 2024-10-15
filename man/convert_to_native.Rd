@@ -4,10 +4,12 @@
 \alias{convert_to_native}
 \title{convert LaTeX wrapper to native pandoc AST}
 \usage{
-convert_to_native(article_dir)
+convert_to_native(article_dir, autonumber_eq = FALSE)
 }
 \arguments{
 \item{article_dir}{path to the directory which contains tex article}
+
+\item{autonumber_eq}{whether to autonumber the equations, default is FALSE}
 }
 \value{
 creates a converted native AST file, as well as a pkg_meta.yaml file
@@ -24,7 +26,7 @@ pandoc (along with lua interpreter) is already installed with
  R-studio, hence if not using R-studio you will need to install pandoc.
  https://pandoc.org/installing.html
 
-Use pandoc version greater than or equal to 2.17
+Use pandoc version greater than or equal to 3.1
 }
 \examples{
 # Note This is a minimal example to execute this function

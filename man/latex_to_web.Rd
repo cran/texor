@@ -12,7 +12,10 @@ latex_to_web(
   temp_mode = TRUE,
   web_dir = FALSE,
   interactive_mode = FALSE,
-  compile_rmd_in_temp = !temp_mode
+  autonumber_eq = FALSE,
+  compile_rmd_in_temp = !temp_mode,
+  kable_tab = TRUE,
+  fig_in_r = TRUE
 )
 }
 \arguments{
@@ -31,7 +34,13 @@ article untouched. default value = TRUE}
 
 \item{interactive_mode}{interactive mode for converting articles with options. default FALSE}
 
-\item{compile_rmd_in_temp}{This works only with a forked version of rjtools.
+\item{autonumber_eq}{whether to autonumber the equations, default is FALSE}
+
+\item{compile_rmd_in_temp}{This works only with a forked version of rjtools.}
+
+\item{kable_tab}{converts to kable table instead of markdown tables}
+
+\item{fig_in_r}{whether to include figures in R code chunks, default is TRUE
 Not recommended to use with CRAN or github version of the rjtools package. (default FALSE)}
 }
 \value{
@@ -41,13 +50,13 @@ RJweb article document in /web folder
 automated function for converting a single RJarticle to web
 }
 \note{
-Use pandoc version greater than or equal to 2.17
+Use pandoc version greater than or equal to 3.1
 
-Do not use example = TRUE param when working with conversions.
+Do not set example = TRUE param when working with conversions.
+
+example param is set TRUE in example, to conform with CRAN check restrictions.
 }
 \examples{
-# Checking for pandoc version
-# texor works with pandoc version >= 2.17
 article_dir <- system.file("examples/article",
                  package = "texor")
 dir.create(your_article_folder <- file.path(tempdir(), "tempdir"))

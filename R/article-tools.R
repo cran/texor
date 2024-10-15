@@ -61,20 +61,23 @@ include_style_file <- function(article_dir) {
 #' convert latex(wrapper) file to markdown
 #'
 #' @param article_dir path to the directory which contains tex article
+#' @param kable_tab converts to kable table instead of markdown tables
+#' @param autonumber_eq whether to autonumber the equations, default is FALSE
+#' @param fig_in_r whether to include figures in R code chunks, default is TRUE
 #' @description
 #' Uses pandoc along with several lua filters
 #' found at inst/extdata/filters in texor package
 #' @note  pandoc (along with lua interpreter) is already installed with
 #'  R-studio, hence if not using R-studio you will need to install pandoc.
 #'  https://pandoc.org/installing.html
-#'  @note Use pandoc version greater than or equal to 2.17
-#'
+#' @note Use pandoc version greater than or equal to 3.1
+#' @note Kable tables will work for simple static data, any math / code /
+#'  image within any table will send the package into fallback mode (normal
+#'  markdown tables) for the rest of tables in the article.
 #' @return creates a converted markdown file, as well as a pkg_meta.yaml file
 #' @export
 #' @examples
 #' # Note This is a minimal example to execute this function
-#' # Checking for pandoc version
-#' # texor works with pandoc version >= 2.17
 #' article_dir <- system.file("examples/article",
 #'                  package = "texor")
 #' dir.create(your_article_folder <- file.path(tempdir(), "tempdir"))
@@ -85,7 +88,7 @@ include_style_file <- function(article_dir) {
 #' rebib::aggregate_bibliography(your_article_path)
 #' texor::convert_to_markdown(your_article_path)
 #' unlink(your_article_folder,recursive = TRUE)
-convert_to_markdown <- function(article_dir) {
+convert_to_markdown <- function(article_dir, kable_tab = TRUE, autonumber_eq = FALSE, fig_in_r = TRUE) {
     # wrapper file name
     article_dir <- xfun::normalize_path(article_dir)
     input_file <- get_wrapper_type(article_dir)
@@ -124,6 +127,13 @@ convert_to_markdown <- function(article_dir) {
         "issue_checker.lua", package = "texor")
     wdtable_filter <- system.file(
         "widetable_patcher.lua", package = "texor")
+    auto_num_eq <- system.file(
+        "auto_number_equations.lua", package = "texor")
+    fig_code_chunk <- system.file(
+        "fig_code_chunk.lua", package = "texor")
+    table_code_chunk <- system.file(
+        "table_code_chunk.lua", package = "texor")
+    sec_depth <- system.file("sec_depth.lua", package = "texor")
     pandoc_opt <- c("-s",
                     "--resource-path", abs_file_path,
                     "--lua-filter", error_checker_filter,
@@ -131,16 +141,32 @@ convert_to_markdown <- function(article_dir) {
                     "--lua-filter", bib_filter,
                     "--lua-filter", equation_filter,
                     "--lua-filter", image_filter,
-                    "--lua-filter", figure_filter,
+                    "--lua-filter", sec_depth)
+    if (fig_in_r) {
+        pandoc_opt <- c(pandoc_opt, "--lua-filter", fig_code_chunk)
+    } else {
+        pandoc_opt <- c(pandoc_opt, "--lua-filter", figure_filter)
+    }
+
+    pandoc_opt <- c(pandoc_opt,
                     "--lua-filter", wdtable_filter,
                     "--lua-filter", code_block_filter,
-                    "--lua-filter", table_filter,
-                    "--lua-filter", stat_filter,
-                    "--lua-filter", bookdown_ref_filter)
+                    "--lua-filter", table_filter)
+
+    if (autonumber_eq) {
+        pandoc_opt <- c(pandoc_opt, "--lua-filter", auto_num_eq)
+    }
+    if (kable_tab) {
+        pandoc_opt <- c(pandoc_opt,
+                        "--lua-filter", table_code_chunk,
+                        "--lua-filter", stat_filter,
+                        "--lua-filter", bookdown_ref_filter)
+    }
+
     output_format <- "markdown-simple_tables-pipe_tables-fenced_code_attributes"
     # This will generate a markdown file with YAML headers.
     if (!pandoc_version_check()) {
-        warning(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=2.17\n","Please Install a newer version of pandoc to run texor"))
+        warning(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=3.1"))
         return(FALSE)
     }
     else {
@@ -169,7 +195,7 @@ convert_to_markdown <- function(article_dir) {
 #' @param article_dir path to the directory which contains tex article
 #' @param web_dir option to create a new web directory, default TRUE
 #' @param interactive_mode interactive mode for converting articles with options. default FALSE
-#' @note Use pandoc version greater than or equal to 2.17
+#' @note Use pandoc version greater than or equal to 3.1
 #' @return R-markdown file in the web folder
 #' @export
 #' @examples
@@ -194,7 +220,7 @@ convert_to_markdown <- function(article_dir) {
 generate_rmd <- function(article_dir, web_dir= TRUE, interactive_mode = FALSE) {
     article_dir <- xfun::normalize_path(article_dir)
     if (!pandoc_version_check()) {
-        warning(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=2.17\n","Please Install a newer version of pandoc to run texor"))
+        warning(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=3.1"))
         return(FALSE)
     }
     if (!check_markdown_file(article_dir)) {
@@ -211,10 +237,14 @@ generate_rmd <- function(article_dir, web_dir= TRUE, interactive_mode = FALSE) {
     issue <- journal_details$issue
     markdown_file <- paste(article_dir,xfun::with_ext(get_wrapper_type(article_dir),"md"),sep = "/")
     metadata <- rmarkdown::yaml_front_matter(markdown_file)
+
     # reads the abstract from the second author field
     # reason : abstract is patched as author in metafix.sty
-    abstract <- metadata$author[2]
-    metadata$abstract <- abstract
+
+    # PHINNEY: I don't see any reason to do this.  The abstract is already in the metadata.
+    # abstract <- metadata$author[2]
+    # metadata$abstract <- abstract
+
     # if metadata$address is NULL
     if (is.null(metadata$address)) {
         metadata$author <- metadata$author[1]
@@ -322,7 +352,6 @@ generate_rmd <- function(article_dir, web_dir= TRUE, interactive_mode = FALSE) {
                 self_contained = TRUE,
                 toc = FALSE,
                 legacy_pdf = TRUE,
-                web_only = TRUE,
                 mathjax = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js",
                 md_extension = "-tex_math_single_backslash"
             )
@@ -381,13 +410,14 @@ generate_rmd <- function(article_dir, web_dir= TRUE, interactive_mode = FALSE) {
 #' convert latex(wrapper) file to pandoc AST
 #'
 #' @param article_dir path to the directory which contains tex article
+#' @param autonumber_eq whether to autonumber the equations, default is FALSE
 #' @description
 #' Uses pandoc along with several lua filters
 #' found at inst/extdata/filters in texor package
 #' @note  pandoc (along with lua interpreter) is already installed with
 #'  R-studio, hence if not using R-studio you will need to install pandoc.
 #'  https://pandoc.org/installing.html
-#' @note Use pandoc version greater than or equal to 2.17
+#' @note Use pandoc version greater than or equal to 3.1
 #' @return creates a converted native AST file, as well as a pkg_meta.yaml file
 #' @export
 #' @examples
@@ -402,7 +432,7 @@ generate_rmd <- function(article_dir, web_dir= TRUE, interactive_mode = FALSE) {
 #' rebib::aggregate_bibliography(your_article_path)
 #' texor::convert_to_native(your_article_path)
 #' unlink(your_article_folder,recursive = TRUE)
-convert_to_native <- function(article_dir) {
+convert_to_native <- function(article_dir, autonumber_eq = FALSE) {
     article_dir <- xfun::normalize_path(article_dir)
     # wrapper file name
     input_file <- get_wrapper_type(article_dir)
@@ -439,6 +469,9 @@ convert_to_native <- function(article_dir) {
         "bookdown_ref.lua", package = "texor")
     wdtable_filter <- system.file(
         "widetable_patcher.lua", package = "texor")
+    auto_num_eq <- system.file(
+        "auto_number_equations.lua", package = "texor")
+    sec_depth <- system.file("sec_depth.lua", package = "texor")
     pandoc_opt <- c("-s",
                     "--resource-path", abs_file_path,
                     "--lua-filter", abs_filter,
@@ -450,11 +483,15 @@ convert_to_native <- function(article_dir) {
                     "--lua-filter", table_filter,
                     "--lua-filter", stat_filter,
                     "--lua-filter", equation_filter,
-                    "--lua-filter", bookdown_ref_filter)
+                    "--lua-filter", bookdown_ref_filter,
+                    "--lua-filter", sec_depth)
+    if (autonumber_eq) {
+        pandoc_opt <- c(pandoc_opt, "--lua-filter", auto_num_eq)
+    }
     output_format <- "native"
     # This will generate a markdown file with YAML headers.
     if (! pandoc_version_check()){
-        warning(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=2.17\n","Please Install a newer version of pandoc to run texor"))
+        warning(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=3.1"))
         return(FALSE)
     }
     else {
@@ -481,8 +518,9 @@ convert_to_native <- function(article_dir) {
 #'  to enable export of this function.
 #' @param web_dir option to create a new web directory, default TRUE
 #' @param interactive_mode interactive mode for converting articles with options. default FALSE
-#' @note Use pandoc version greater than or equal to 2.17
-#' @note Do not use example = TRUE param when working with conversions.
+#' @note Use pandoc version greater than or equal to 3.1
+#' @note Do not set example = TRUE param when working with conversions.
+#' @note example param is set TRUE in example, to conform with CRAN check restrictions.
 #' @return Renders a RJwrapper.html file in the /web folder, in example it will
 #' return TRUE
 #' @export
@@ -505,7 +543,7 @@ produce_html <- function(article_dir,example = FALSE, web_dir = TRUE, interactiv
         return(TRUE)
     }
     if (!pandoc_version_check()) {
-        warning(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=2.17\n","Please Install a newer version of pandoc to run texor"))
+        warning(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=3.1"))
         return(FALSE)
     }
     else {
@@ -585,4 +623,229 @@ create_article <- function(name="test", edit = TRUE){
     }
 
     message("Success: your paper is ready to edit!")
+}
+
+#' @title Modify Markdown from Sweave to R-markdown
+#'
+#' @description
+#' generate rmarkdown file in output folder
+#'
+#' @param article_dir path to the directory which contains tex article
+#' @param web_dir option to create a new web directory, default TRUE
+#' @param interactive_mode interactive mode for converting articles with options. default FALSE
+#' @param output_format knit output type for the RMarkdown file, options for "bookdown", "biocstyle", "litedown"
+#' @param autonumber_eq whether to autonumber the equations, default is FALSE
+#' @param autonumber_sec whether to autonumber the sections, default is TRUE
+#' @param algorithm_render Enable to include algorithms with pseudocode.js, default is FALSE optional is TRUE
+#' @note Use pandoc version greater than or equal to 3.1
+#' @return R-markdown file in the web folder
+#' @export
+#' @examples
+#' # Note This is a minimal example to execute this function
+#' # Please refer to texor::rnw_to_rmd for a detailed example
+rnw_generate_rmd <- function(article_dir, web_dir= TRUE, interactive_mode = FALSE,
+                             output_format,
+                             autonumber_eq = FALSE,
+                             autonumber_sec = TRUE,
+                             algorithm_render = FALSE) {
+    article_dir <- xfun::normalize_path(article_dir)
+    if (!pandoc_version_check()) {
+        warning(paste0("pandoc version too old, current-v : ",rmarkdown::pandoc_version()," required-v : >=3.1"))
+        return(FALSE)
+    }
+    if (!check_markdown_file(article_dir)) {
+        warning(paste0("Pandoc Failed to convert the LaTeX article, please check for missing brackets/closing environments and spelling mistakes !"))
+        return(FALSE)
+    }
+    else {
+        #pass
+    }
+    volume <- 1 # placeholder value
+    issue <- 1 # placeholder value
+    journal_details <- get_journal_details(article_dir)
+    volume <- journal_details$volume
+    issue <- journal_details$issue
+    markdown_file <- paste(article_dir,xfun::with_ext(get_wrapper_type(article_dir),"md"),sep = "/")
+    metadata <- rmarkdown::yaml_front_matter(markdown_file)
+    # reads the abstract from the second author field
+    # reason : abstract is patched as author in metafix.sty
+    # abstract <- metadata$author[2]
+    # metadata$abstract <- abstract
+    # if metadata$address is NULL
+    if (is.null(metadata$address)) {
+        metadata$author <- metadata$author[1]
+    } else {
+        metadata$author <- lapply(
+            strsplit(metadata$address, "\\\n", fixed = TRUE),
+            function(person) {
+                author <- list(
+                    name = person[1],
+                    affiliation = person[2]
+                )
+                if (any(orcid <- grepl("^ORCiD:", person))) {
+                    author$orcid <- sub("^ORCiD: ", "", person[orcid])
+                }
+                if (any(email <- grepl("^email:", person))) {
+                    author$email <- sub("^email:", "", person[email])
+                }
+                fields <- logical(length(person))
+                fields[1:2] <- TRUE
+                if (any(address <- !(fields | orcid | email))) {
+                    author$address <- person[address]
+                }
+                author
+            }
+        )
+    }
+    metadata$address <- NULL
+    # article metadata from DESCRIPTION
+    article_metadata <- if (file.exists(file.path(
+        dirname(markdown_file), "DESCRIPTION"))) {
+        if (!journal_details$sample) {
+            art <- load_article(file.path(dirname(markdown_file), "DESCRIPTION"))
+            online_date <- Filter(function(x) x$status == "online", art$status)
+            acknowledged_date <- Filter(function(x) x$status == "acknowledged", art$status)[[1]]$date
+        } else {
+            online_date <- list()
+            acknowledged_date <- Sys.Date()
+        }
+        online_date <- if (length(online_date) == 0) {
+            Sys.Date()
+        } else {
+            online_date[[1]]$date
+        }
+        list(
+            slug = if (journal_details$sample) {'~'} else {journal_details$slug},
+            acknowledged = acknowledged_date,
+            online = Sys.Date()
+        )
+    } else {
+        # Produce minimal article metadata for news
+        list(
+            slug = journal_details$slug,
+            online = Sys.Date()
+        )
+    }
+    # if article has no abstract
+    if (toString(metadata$abstract) == "NA") {
+        metadata$abstract <- paste0("The '", metadata$title,
+                                    "' article from the ", issue, " issue.")
+    }
+    pkg_yaml_path <- paste(dirname(markdown_file), "pkg_meta.yaml", sep = "/" )
+    if (interactive_mode) {
+        cli::cli_alert_warning(paste0("Currently the slug is : ",
+                                      article_metadata$slug,
+                                      "\nfor the article titled : ",
+                                      metadata$title,
+                                      "\nDo you want to update the slug"))
+        if (utils::menu(c("Yes", "No")) == 1) {
+            article_metadata$slug = toString(readline("Enter the new Slug : "))
+        }
+        cli::cli_alert_warning(paste0("Do you want to set the firstpage,lastpage ?",
+                                      "\nfor the article titled : ",
+                                      metadata$title))
+        if (utils::menu(c("Yes", "No")) == 1) {
+            article_metadata$pages[1] = toString(readline("Enter the firstpage : "))
+            article_metadata$pages[2] = toString(readline("Enter the lastpage : "))
+        }
+    }
+    front_matter_list <- list(
+        "bookdown" = list(
+            title = metadata$title,
+            abstract = metadata$abstract, #%||% ,
+            author = metadata$author,
+            date = format_non_null(article_metadata$online),
+            vignette = paste("%\\VignetteEngine{knitr::rmarkdown}\n%\\VignetteEncoding{UTF-8}\n%\\VignetteIndexEntry{",
+                             metadata$VignetteIndexEntry, "}\n%\\VignetteDepends{",
+                             metadata$VignetteDepends, "}", sep = ""),
+            output = list(
+                "bookdown::html_document2" = list(
+                    base_format = "rmarkdown::html_vignette",
+                    number_sections = FALSE,
+                    math_method = "katex"
+                )
+            ),
+            "link-citations" = TRUE,
+            bibliography = metadata$bibliography
+        ),
+        "biocstyle" = list(
+            title = metadata$title,
+            abstract = metadata$abstract, #%||% ,
+            author = metadata$author,
+            output = list(
+                "BiocStyle::html_document" = list(
+                    toc_float = TRUE
+                ),
+                "BiocStyle::pdf_document" = "default"
+            ),
+            vignette = paste("%\\VignetteEngine{knitr::rmarkdown}\n%\\VignetteEncoding{UTF-8}\n%\\VignetteIndexEntry{",
+                             metadata$VignetteIndexEntry, "}\n", sep = ""),
+            bibliography = metadata$bibliography
+        ),
+        "litedown" = list(
+            title = metadata$title,
+            output = list(
+                "litedown::html_format" = list(
+                    meta = list(
+                        css = c("@default")
+                    )
+                )
+            ),
+            vignette = paste("%\\VignetteEngine{litedown::vignette}\n%\\VignetteEncoding{UTF-8}\n%\\VignetteIndexEntry{",
+                             metadata$VignetteIndexEntry, "}\n", sep = "")
+        )
+    )
+
+    if (autonumber_sec == TRUE) {
+        front_matter_list$"bookdown"$output[["bookdown::html_document2"]]$includes <- list(
+            in_header = list("auto-number-sec-js.html")
+        )
+    }
+    if (autonumber_eq == TRUE) {
+        # Set math method to mathjax if autonumber
+        front_matter_list$"bookdown"$output[["bookdown::html_document2"]]$math_method = "mathjax"
+    }
+    if (algorithm_render) {
+        if (is.null(front_matter_list$"bookdown"$output[["bookdown::html_document2"]]$includes$in_header)) {
+            front_matter_list$"bookdown"$output[["bookdown::html_document2"]]$includes$in_header <- "pseudocodejs-latest.html"
+        } else {
+            front_matter_list$"bookdown"$output[["bookdown::html_document2"]]$includes$in_header <-
+                c(front_matter_list$"bookdown"$output[["bookdown::html_document2"]]$includes$in_header, "pseudocodejs-latest.html")
+        }
+    }
+
+    front_matter <- front_matter_list[[output_format]]
+    if (file.exists(markdown_file)){
+        pandoc_md_contents <- readLines(markdown_file)
+    }
+    else{
+        warning("Markdown file not found/Unreadable !")
+        return(FALSE)
+    }
+    delimiters <- grep("^(---|\\.\\.\\.)\\s*$", pandoc_md_contents)
+    article_body <- c()
+    if (delimiters[1] > 1)
+        article_body <- c(article_body, pandoc_md_contents[1:delimiters[1] - 1])
+    if (delimiters[2] < length(pandoc_md_contents))
+        article_body <- c(article_body, pandoc_md_contents[-(1:delimiters[2])])
+
+    input_file <- basename(markdown_file)
+    if (!web_dir) {
+        output_file_name <- paste(dirname(markdown_file),"/",
+                                  toString(tools::file_path_sans_ext(input_file)),
+                                  ".Rmd", sep = "")
+    }
+    if (web_dir) {
+        output_file_name <- paste(dirname(markdown_file),
+                                  "/web/",
+                                  toString(tools::file_path_sans_ext(input_file)),
+                                  ".Rmd", sep = "")
+        dir.create(dirname(output_file_name), showWarnings = FALSE)
+    }
+
+    yaml_front_matter <- yaml::as.yaml(front_matter)
+
+    xfun::write_utf8(
+        c("---", yaml::as.yaml(front_matter), "---", article_body),
+        output_file_name)
 }
