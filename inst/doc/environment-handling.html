@@ -37,6 +37,7 @@ overflow: visible;
 }
 </style>
 <style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
@@ -333,8 +334,8 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <p>Transition from LaTeX to R markdown syntax often has multiple ways of describing article components. For example figure environments in R markdown,
 has multiple ways to include a figure like, firstly there is simple markdown structure, then one can use <code>knitr::include_graphics()</code> within a code chunk to include images or if you are targetting HTML web formats then you can also choose to include images using <code>&lt;img .. /&gt;</code> tag as well. Similar variations exist in LaTeX as well and that is why understanding how the <code>texor</code> package will transform these environments and which options are available for you to choose is important.</p>
-<div id="figure-environments" class="section level2" number="0.1">
-<h2><span class="header-section-number">0.1</span> Figure Environments</h2>
+<div id="figure-environments" class="section level2" number="1">
+<h2><span class="header-section-number">1</span> Figure Environments</h2>
 <p>Images are an essential component in any article, However due to the differences in the support
 for various graphic formats between LaTeX and markdown/HTML we need to fallback on raster graphics.</p>
 <table>
@@ -347,7 +348,7 @@ for various graphic formats between LaTeX and markdown/HTML we need to fallback 
 <col width="12%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th align="left">Graphics.Format</th>
 <th align="left">LaTeX</th>
 <th align="left">Markdown</th>
@@ -356,42 +357,42 @@ for various graphic formats between LaTeX and markdown/HTML we need to fallback 
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td align="left">PNG</td>
 <td align="left">✓</td>
 <td align="left">✓</td>
 <td align="left">✓</td>
 <td align="left">✓</td>
 </tr>
-<tr class="even">
+<tr>
 <td align="left">JPG</td>
 <td align="left">✓</td>
 <td align="left">✓</td>
 <td align="left">✓</td>
 <td align="left">✓</td>
 </tr>
-<tr class="odd">
+<tr>
 <td align="left">PDF</td>
 <td align="left">✓</td>
 <td align="left">✗</td>
 <td align="left">✗</td>
 <td align="left">✗</td>
 </tr>
-<tr class="even">
+<tr>
 <td align="left">SVG</td>
 <td align="left">✗</td>
 <td align="left">✓</td>
 <td align="left">✓</td>
 <td align="left">✓</td>
 </tr>
-<tr class="odd">
+<tr>
 <td align="left">Tikz</td>
 <td align="left">✓</td>
 <td align="left">✗</td>
 <td align="left">✓(using tikz engine)</td>
 <td align="left">✗</td>
 </tr>
-<tr class="even">
+<tr>
 <td align="left">Algorithm</td>
 <td align="left">✓</td>
 <td align="left">✗</td>
@@ -405,8 +406,8 @@ do not require any additional pre-processing. Pandoc handles it well.</p>
 <p>PNG,JPG images are easily included as markdown images with captions, labels and other parameters.</p>
 <p>For other image formats like tikz and algorithm, they are first isolated and compiled into a PDF,
 then to a PNG using pdftools package.</p>
-<div id="for-the-best-results-after-conversion" class="section level4" number="0.1.0.1">
-<h4><span class="header-section-number">0.1.0.1</span> For the best results after conversion :</h4>
+<div id="for-the-best-results-after-conversion" class="section level4" number="1.0.1">
+<h4><span class="header-section-number">1.0.1</span> For the best results after conversion :</h4>
 <ol style="list-style-type: decimal">
 <li>Avoid using framebox or any other latex command to wrap the <code>\includegraphics{}</code> .
 This might interfere with the packages ability to properly read the path and copy the relevant image properly.</li>
@@ -428,8 +429,8 @@ This might interfere with the packages ability to properly read the path and cop
 <div class="sourceCode" id="cb3"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="al">![Figure 1: This is a sample caption](image/sample.png)</span>{width=&quot;100%&quot;</span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>alt=&quot;graphic without alt text&quot;}</span></code></pre></div>
 </div>
-<div id="notes" class="section level4" number="0.1.0.2">
-<h4><span class="header-section-number">0.1.0.2</span> Notes</h4>
+<div id="notes" class="section level4" number="1.0.2">
+<h4><span class="header-section-number">1.0.2</span> Notes</h4>
 <ol style="list-style-type: decimal">
 <li>Default handling of the <code>texor</code> package is to generate R markdown style code chunks to include images using
 <code>knitr::include_graphics(c(file_path))</code>. This mechanism was added using a unique Lua filter <a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a> which
@@ -441,8 +442,8 @@ can also handle multiple images in a single figure environment as well. The Lua 
 </ol>
 </div>
 </div>
-<div id="table-environments" class="section level2" number="0.2">
-<h2><span class="header-section-number">0.2</span> Table Environments</h2>
+<div id="table-environments" class="section level2" number="2">
+<h2><span class="header-section-number">2</span> Table Environments</h2>
 <p>Tables are commonly used in articles to display data in a tabular format. However, there are differences in the way tables are handled by LaTeX and HTML.</p>
 <p>LaTeX tables have more customization and are usually optimized for printing, whereas the web articles need tables optimized for varying sizes of media.</p>
 <p>pandoc converts most of the tables somewhat easily, but is unable to do well with table customization packages and complex tables.</p>
@@ -498,8 +499,8 @@ EX5 ,X51 ,X52 ,Y51 ,Y52</code></pre>
 <span id="cb7-17"><a href="#cb7-17" tabindex="-1"></a></span>
 <span id="cb7-18"><a href="#cb7-18" tabindex="-1"></a>  : Table 1: An Example Table</span>
 <span id="cb7-19"><a href="#cb7-19" tabindex="-1"></a>:::</span></code></pre></div>
-<div id="notes-1" class="section level4" number="0.2.0.1">
-<h4><span class="header-section-number">0.2.0.1</span> Notes</h4>
+<div id="notes-1" class="section level4" number="2.0.1">
+<h4><span class="header-section-number">2.0.1</span> Notes</h4>
 <ol style="list-style-type: decimal">
 <li>The table data is parsed and converted into a csv file using <a href="https://github.com/Abhi-1U/table-code-chunk">this</a> Lua filter which is open source
 and available under MIT License.</li>
@@ -514,14 +515,14 @@ in the converted article.</li>
 </ol>
 </div>
 </div>
-<div id="code-environments" class="section level2" number="0.3">
-<h2><span class="header-section-number">0.3</span> Code Environments</h2>
+<div id="code-environments" class="section level2" number="3">
+<h2><span class="header-section-number">3</span> Code Environments</h2>
 <p>Pandoc naturally converts verbatim environment easily, however the redefinition
 of other commands such as <code>example</code>, <code>example*</code>, <code>Sinput</code> etc to verbatim does not work well in pandoc.</p>
 <p>Hence <code>texor</code> package uses the stream editor to search find and replace matching code environments to verbatim before pandoc touches it.</p>
 <p>This way the the code is not lost in conversion, also a pandoc extension is used to add attributes to the markdown code using <code>fenced_code_attributes</code></p>
-<div id="supported-rj-article-latex-code-environment" class="section level4" number="0.3.0.1">
-<h4><span class="header-section-number">0.3.0.1</span> Supported RJ-article (LaTeX) code environment:</h4>
+<div id="supported-rj-article-latex-code-environment" class="section level4" number="3.0.1">
+<h4><span class="header-section-number">3.0.1</span> Supported RJ-article (LaTeX) code environment:</h4>
 <table>
 <caption><span id="tab:unnamed-chunk-3">Table 2: </span>Code Environment support in texor</caption>
 <colgroup>
@@ -530,14 +531,14 @@ of other commands such as <code>example</code>, <code>example*</code>, <code>Sin
 <col width="36%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th align="left">example</th>
 <th align="left">S.series</th>
 <th align="left">special.verbatim</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td align="left">example, example*</td>
 <td align="left">Sin, Sout, Scode,Sinput,Soutput</td>
 <td align="left">smallverbatim, boxedverbatim</td>
@@ -545,8 +546,8 @@ of other commands such as <code>example</code>, <code>example*</code>, <code>Sin
 </tbody>
 </table>
 </div>
-<div id="sweave-code-chunks" class="section level4" number="0.3.0.2">
-<h4><span class="header-section-number">0.3.0.2</span> Sweave code chunks</h4>
+<div id="sweave-code-chunks" class="section level4" number="3.0.2">
+<h4><span class="header-section-number">3.0.2</span> Sweave code chunks</h4>
 <p>With updates to the <code>texor</code> package we were able to add support for Sweave articles which included retaining the code chunks with parameters. This functionality is not found natively
 in LaTeX, hence unsupported in pandoc as well. To add this feature, we designed a custom pandoc reader in Lua, which uses LPEG expressions to separate out the code chunks from the Sweave
 document, while retaining the parameters and code.</p>
@@ -561,21 +562,21 @@ document, while retaining the parameters and code.</p>
 <span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a><span class="st">```</span></span></code></pre></div>
 <p>Similarly inline code express in Sweave defined by <code>\Sexpr{&#39;0.6&#39;}</code> will be transformed to <code>` r &#39;0.6&#39;`</code></p>
 </div>
-<div id="notes-2" class="section level4" number="0.3.0.3">
-<h4><span class="header-section-number">0.3.0.3</span> Notes</h4>
+<div id="notes-2" class="section level4" number="3.0.3">
+<h4><span class="header-section-number">3.0.3</span> Notes</h4>
 <ol style="list-style-type: decimal">
 <li>Any special markup (like font-size, font-style) bought by any of these code environments will be lost.</li>
 <li>The retained text will have syntax highlighting (for R by default, if you want to change the syntax highlighting, change the language in the markdown source code formed).</li>
 </ol>
 </div>
 </div>
-<div id="math-environments" class="section level2" number="0.4">
-<h2><span class="header-section-number">0.4</span> Math Environments</h2>
+<div id="math-environments" class="section level2" number="4">
+<h2><span class="header-section-number">4</span> Math Environments</h2>
 <p>Math typesetting has always been LaTeX’s highlight feature, making it a de facto choice among academicians and researchers globally. However, as we proceed to our humble web interfaces, math is hard to describe traditionally.
 There have been advancements in JavaScript libraries to better Typeset and present math in web pages but not all LaTeX commands/math functions are available.</p>
 <p>The texor package uses Mathjax version 3 to enhance the visual look of the math content in HTML. There is support for equations, inline math, and equation numbering.</p>
-<div id="equation-numbering" class="section level4" number="0.4.0.1">
-<h4><span class="header-section-number">0.4.0.1</span> Equation Numbering</h4>
+<div id="equation-numbering" class="section level4" number="4.0.1">
+<h4><span class="header-section-number">4.0.1</span> Equation Numbering</h4>
 <p>In bookdown, you do not get automatic numbering of un-labelled equations. This can be tricky to deal with if we want to have the equation numbering matching with the one in LaTeX.
 To circumvent this issue we first transform the equation labels both in the equations and references, to maintain support with the specifications prescribed in bookdown.
 Then we transform the labels from LaTeX label in equations from <code>\label{..}</code> to <code>(\#eq:..)</code> and references from <code>\ref{..}</code> to <code>\@ref(eq:..)</code> which ensures compatibility.
@@ -583,8 +584,8 @@ Next for equations without labels and no <code>\nonumber</code> commands, we aut
 <p>To enable this you need to set the option <code>autonumber_eq</code> as <code>TRUE</code> while converting the documents.</p>
 </div>
 </div>
-<div id="output-formats" class="section level2" number="0.5">
-<h2><span class="header-section-number">0.5</span> Output Formats</h2>
+<div id="output-formats" class="section level2" number="5">
+<h2><span class="header-section-number">5</span> Output Formats</h2>
 <p>The aim of the <code>texor</code> package was to convert the LaTeX source code to a R markdown file which could be then knitted into different web formats.</p>
 <p>For R journal articles, we prefer to use the template from <code>rjtools</code> package <code>rjtools::rjournal_web_article</code>.</p>
 <p>For Sweave articles however, we have opened up options for vignette styles.</p>
@@ -593,8 +594,8 @@ Next for equations without labels and no <code>\nonumber</code> commands, we aut
 <li><code>litedown</code> : For a lightweight html vignette, set the option <code>output_format</code> to <code>litedown</code>, which will use <code>litedown::html_format</code> for the vignette.</li>
 <li><code>biocstyle</code> : Commonly used among bioconductor vignettes, set the option <code>output_format</code> to <code>biocstyle</code> which will use <code>BiocStyle::html_document</code> for the vignette.</li>
 </ol>
-<div id="notes-3" class="section level4" number="0.5.0.1">
-<h4><span class="header-section-number">0.5.0.1</span> Notes</h4>
+<div id="notes-3" class="section level4" number="5.0.1">
+<h4><span class="header-section-number">5.0.1</span> Notes</h4>
 <ol style="list-style-type: decimal">
 <li>Some functionality like bibliography/footnotes might be lost in <code>litedown</code> as of now as it is an experimental package.</li>
 <li><code>bookdown</code> option includes an header file with custom JavaScript to incorporate section numbering and normal equation numbering (i.e. eq 1,2,3,.. instead of 1.1,1.2,2.1,3.1,..), this will be included when <code>autonumber_sec</code> is set to <code>TRUE</code>.</li>
