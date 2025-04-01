@@ -1,7 +1,7 @@
 Package: texor
 Type: Package
 Title: Converting 'LaTeX' 'R Journal' Articles into 'RJ-web-articles'
-Version: 1.5.3
+Version: 1.5.6
 Authors@R: 
     c(person(given = "Abhishek",
              family = "Ulayil",
@@ -50,7 +50,7 @@ Config/testthat/edition: 3
 Language: en-US
 SystemRequirements: pandoc (>= 3.1) - https://pandoc.org
 NeedsCompilation: no
-Packaged: 2024-12-13 17:01:19 UTC; abhi
+Packaged: 2025-04-01 18:46:44 UTC; abhi
 Author: Abhishek Ulayil [aut, cre, cph]
     (<https://orcid.org/0009-0000-6935-8690>),
   Heather Turner [ctb] (<https://orcid.org/0000-0002-1256-3375>),
@@ -60,4 +60,4 @@ Author: Abhishek Ulayil [aut, cre, cph]
   Yinxiang Huang [ctb] (<https://orcid.org/0009-0007-2031-7901>)
 Maintainer: Abhishek Ulayil <perricoq@outlook.com>
 Repository: CRAN
-Date/Publication: 2024-12-13 17:20:02 UTC
+Date/Publication: 2025-04-01 19:00:02 UTC
